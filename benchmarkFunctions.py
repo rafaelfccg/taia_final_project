@@ -1,6 +1,12 @@
 import math
 import sys
 
+def product(list):
+    p = 1
+    for i in list:
+        p *= i
+    return p
+
 ackley_max_x = 32
 ackley_min_x = -32
 
@@ -15,6 +21,12 @@ rosenbrock_min_x = -30
 
 schwefel226_max_x = 500
 schwefel226_min_x = -500
+
+schwefel222_max_x = 100
+schwefel222_min_x = -100
+
+sphere_max_x = 100
+sphere_min_x = -100
 
 # 20 dimensions
 # minimum 0
@@ -54,6 +66,12 @@ def rosenbrock(genome):
 def Schwefel226(genome):
 	return (sum(map(lambda x : -x * math.sin(math.sqrt(math.fabs(x))), genome)))
 
+def Schwefel222(genome):
+	return sum(map(lambda x : math.fabs(x), genome)) + product(map(lambda x : math.fabs(x), genome))
+
+def Sphere(genome):
+	return math.sqrt(sum(map(lambda x : x**2, genome)))
+
 # 2 dimensions
 
 branin_max_x = 10
@@ -73,6 +91,21 @@ def branin(genome):
 
 	return a * ((genome[1] - b * (genome[0]**2) + c * genome[0] - d)**2) * g *(1 - h) * math.cos(genome[0]) + g
 
+# # dimensions 4
+# PS: Ta faltando valores na tabela de hartman1 que ele menciona no artigo
+# hartman1_max_x = 1
+# hartman1_min_x = 0
+
+# # minimum -3.86
+# def hartman1(genome):
+# 	ci = [1,1.2,3,3.2]
+# 	aij = [[3,10,30],[0.1, 10, 35],[3,10,30],[0.1,10,35]]
+# 	pij = [[0.3689,0.117,0.2673],[0.4699, 0.4387, 0.747],[0.1091,0.8732,0.5547],[0.03815, 0.5743, 0.8828]]
+# 	for x in xrange(1,10):
+# 		pass
+# 	return
 
 
-print (Schwefel226([1,1]))
+
+
+print (Schwefel222([1,1]))
