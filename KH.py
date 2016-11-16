@@ -3,17 +3,20 @@ import math
 import benchmarkFunctions
 
 NUM_DIMENSIONS = 20
-DIFUSION_SPEED = 0.01
+
 
 NUM_ITERATIONS = 1000
 POPULATION_SIZE = 100
 
 random_range_value = 10
 
-INERTIA_NEIGHBORS = 0.2
-INERTIA_FOOD = 0.2
+INERTIA_NEIGHBORS = 0.9
+INERTIA_FOOD = 0.9
+CT = 0.5
+
 N_MAX = 0.01
 FORAGING_SPEED = 0.02
+DIFUSION_SPEED = 0.04
 
 EPSILON = 10**-5
 
@@ -21,7 +24,6 @@ X_MAX = 32
 X_MIN = -32
 
 NUM_DIMENSIONS = 20
-CT = 1
 
 fitness = benchmarkFunctions.ackley
 kbest = 10**9
@@ -97,7 +99,7 @@ def find_neighbors(krill, population, population_fitness):
 	neighbors_fit = list()
 	for idx, x in enumerate(population):
 		individual_i = x[0]
-		distance_i = distance(krill,individual_i)
+		distance_i = 0.9 * distance(krill,individual_i)
 		# print distance_i
 		if(individual_i != krill and distance_i <= ds):
 			neighbors.append(x[0])
@@ -180,7 +182,7 @@ def select_best_krill(population):
 	return (min_krill,population_fitness)
 
 def delta_t():
-	nv = NUM_DIMENSIONS
+	nv = NUM_DIMENSIONS + 10
 	sumi = 0 
 	for i in range(20):
 		sumi = X_MAX- X_MIN
@@ -218,11 +220,17 @@ def evolve():
 
        	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
         
+		# print population
+        if i % 10 == 0 :
+        	print population_fitness 
+
         for idx, krill in enumerate(population):
         	krill_best = krill[1]
         	(movement_vector, new_N, new_F) = dX_dt(krill[0], population_fitness[idx], krill_best, best_krill[0], x_food ,population, population_fitness, krill[2], krill[3],i)
         	new_krill_position = vector_sum(krill[0] ,vector_constant_product(movement_vector ,delta_t()))
         	
+        	# print movement_vector 
+
         	if fitness(new_krill_position) < fitness(krill_best): 
         		krill_best =  new_krill_position
 
@@ -233,8 +241,6 @@ def evolve():
 
         solutions = check_for_solution(new_population)
         population = new_population
-
-        # print population
 
         if solutions > 0 and not solved:
             solved = True
