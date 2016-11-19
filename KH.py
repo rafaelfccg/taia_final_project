@@ -16,14 +16,12 @@ CT = 0.5
 
 N_MAX = 0.01
 FORAGING_SPEED = 0.02
-DIFUSION_SPEED = 0.04
+DIFUSION_SPEED = 0.010
 
-EPSILON = 10**-5
+EPSILON = 1e-3
 
 X_MAX = 32
 X_MIN = -32
-
-NUM_DIMENSIONS = 20
 
 fitness = benchmarkFunctions.ackley
 kbest = 10**9
@@ -49,7 +47,7 @@ def generate_population():
 def make_rand_vector(dims):
     vec = [random.uniform(-random_range_value, random_range_value) for i in range(dims)]
     mag = sum(x**2 for x in vec) ** .5
-    return [x/mag for x in vec]
+    return [float(x) / mag for x in vec]
 
 def zero_vector(dims):
 	return [0 for i in range(dims)]
@@ -67,7 +65,7 @@ def vector_constant_product(vector1, constant):
 	return [x_i * constant for x_i in vector1]
 
 def random_difusion(iteration):
-	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - iteration/NUM_ITERATIONS))
+	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1.0 - float(iteration / NUM_ITERATIONS)))
 
 def distance(v1, v2):
 	return norm(vector_diff(v1,v2))
@@ -75,12 +73,12 @@ def distance(v1, v2):
 def k_hat(ki, kj):
 	global kworst
 	global kbest
-	return (ki - kj) / (kworst - kbest)
+	return float(ki - kj) / (kworst - kbest)
 
 def x_hat(xi, xj):
 	diff = vector_diff(xj,xi)
 	norm_diff = norm(diff)
-	return [x/(norm_diff + EPSILON) for x in diff]
+	return [float(x) / (norm_diff + 1e-9) for x in diff]
 
 def alfa_local(krill, krill_fit, population, population_fitness):
 	(neighbors, neighbors_fit) = find_neighbors(krill, population, population_fitness)
@@ -93,13 +91,13 @@ def alfa_local(krill, krill_fit, population, population_fitness):
 	return sum_vec
 
 def find_neighbors(krill, population, population_fitness):
-	ds = sensing_distance(krill,population)
+	ds = 0.9 * sensing_distance(krill,population)
 	# print "sensing_distance: " + str(ds)
 	neighbors = list()
 	neighbors_fit = list()
 	for idx, x in enumerate(population):
 		individual_i = x[0]
-		distance_i = 0.9 * distance(krill,individual_i)
+		distance_i = distance(krill,individual_i)
 		# print distance_i
 		if(individual_i != krill and distance_i <= ds):
 			neighbors.append(x[0])
@@ -108,7 +106,7 @@ def find_neighbors(krill, population, population_fitness):
 	return (neighbors, neighbors_fit)
 
 def sensing_distance(krill, population):
-	return 1.0/(POPULATION_SIZE) * sum(map(lambda x : distance(x[0], krill), population))
+	return (1.0 / (1.0 * (POPULATION_SIZE))) * sum(map(lambda x : distance(krill, x[0]), population))
 
 def alfa_target(krill, krill_fit, best, best_fit, iteration):
 	cbest = C_best(iteration)
@@ -126,20 +124,20 @@ def alfa(krill, krill_fit, best, population, population_fitness, iteration):
 	return vector_sum(local,target)
 
 def C_best(iteration):
-	return 2 * (random.uniform(0,1) + iteration/NUM_ITERATIONS)
+	return 2 * (random.uniform(0,1) + (float(iteration) / NUM_ITERATIONS))
 
 def food_position(population, population_fitness):
 	sum_denominator = 0
 	sum_numerator = zero_vector(len(population[0][0]))
 	for idx, krill in enumerate(population):
-		fit_weight = 1/population_fitness[idx]
+		fit_weight = 1.0 /population_fitness[idx]
 		sum_numerator = vector_sum(sum_numerator, vector_constant_product(krill[0],fit_weight))
 		sum_denominator += fit_weight
 
 	# print sum_numerator
 	# print sum_denominator
 
-	return vector_constant_product(sum_numerator, sum_denominator)
+	return vector_constant_product(sum_numerator, 1.0 / sum_denominator)
 
 def beta_food(krill, krill_fit, food_pos, iteration):
 	# print (food_pos)
@@ -147,7 +145,7 @@ def beta_food(krill, krill_fit, food_pos, iteration):
 	return  vector_constant_product(k_x_hat_product(krill, food_pos, krill_fit, food_fit), C_food(iteration))
 
 def C_food(iteration):
-	return 2*(1 - iteration/NUM_ITERATIONS)
+	return 2 * (1.0 - (float(iteration) / NUM_ITERATIONS))
 
 def neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration):
 	return vector_sum(vector_constant_product(alfa(krill, krill_fit, best, population, population_fitness, iteration), N_MAX), vector_constant_product(old_N, INERTIA_NEIGHBORS))
@@ -181,13 +179,34 @@ def select_best_krill(population):
 
 	return (min_krill,population_fitness)
 
-def delta_t():
-	nv = NUM_DIMENSIONS + 10
-	sumi = 0 
-	for i in range(20):
-		sumi = X_MAX- X_MIN
+# def delta_t():
+# 	nv = NUM_DIMENSIONS
+# 	sumi = 0 
+# 	for i in range(NUM_DIMENSIONS):
+# 		sumi = sumi + X_MAX - X_MIN
 
-	return CT*sumi
+# 	return CT*sumi
+
+def delta_t(population):
+    nv = NUM_DIMENSIONS
+    sumi = 0 
+    lower_bound = list(population[0][0])
+    upper_bound = list(population[0][0])
+
+    for x in population:
+        for xi in range(NUM_DIMENSIONS):
+            if lower_bound[xi] > x[0][xi]:
+                lower_bound[xi] = x[0][xi]
+
+            if upper_bound[xi] < x[0][xi]:
+                upper_bound[xi] = x[0][xi]
+
+    #print str(lower_bound) + " " + str(upper_bound)
+
+    for x in range(NUM_DIMENSIONS):
+        sumi += upper_bound[x] - lower_bound[x]
+
+    return CT * sumi
 
 def check_for_solution(population):
 	solutions = 0
@@ -227,7 +246,7 @@ def evolve():
         for idx, krill in enumerate(population):
         	krill_best = krill[1]
         	(movement_vector, new_N, new_F) = dX_dt(krill[0], population_fitness[idx], krill_best, best_krill[0], x_food ,population, population_fitness, krill[2], krill[3],i)
-        	new_krill_position = vector_sum(krill[0] ,vector_constant_product(movement_vector ,delta_t()))
+        	new_krill_position = vector_sum(krill[0] ,vector_constant_product(movement_vector ,delta_t(population)))
         	
         	# print movement_vector 
 
@@ -246,12 +265,13 @@ def evolve():
             solved = True
             CONVERGENT_INDIVIDUALS.append(solutions)
             SOLUTION_FOUND_ITERATIONS.append(i)
-            mean_pop_fitness = mean(map(lambda x: ackley(x), population))
-            INDIVIDUALS_FITNESS.append(mean_pop_fitness)
+            #mean_pop_fitness = mean(map(lambda x: ackley(x), population))
+            #INDIVIDUALS_FITNESS.append(mean_pop_fitness)
             CONVERGENT_EXECS+=1
             print "Solution found after " + str(i) + " iterations"
-            print "Population fitness: " + str(mean_pop_fitness)
+            #print "Population fitness: " + str(mean_pop_fitness)
             print "Convergent individuals: " + str(solutions)
+            return
         elif solutions==100:
             ALL_SOLVED_ITERATIONS.append(i)
             print "All individuals converged at iter " + str(i)
