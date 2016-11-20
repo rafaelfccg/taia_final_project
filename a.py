@@ -5,16 +5,20 @@ import random
 MAX_ITERATIONS = 1000
 NUM_DIMENSIONS = 2
 POPULATION_SIZE = 10
+
 X_MAX = 32
 X_MIN = -32
+
 EPS = 1e-9
+
+D_MAX = 0.002
 
 # Global iteration value
 curr_iteration = 1
 
 # Global fitness values
-Xworst = (list(), 0.0)
-Xbest = (list(), 1e10)
+Xworst = (list(), 0.0, list(), 0.0)
+Xbest = (list(), 1e10, list(), 1e10)
 
 ############################################
 # Begin helpers
@@ -85,10 +89,8 @@ def target_alpha(population):
     Cbest = 2.0 * (random.uniform(0.0, 1.0) + (curr_iteration / MAX_ITERATIONS))
     alphas = list()
     for Xi in population:
-        alphai = list()
         alphai = [Cbest * kij_hat(Xi, Xbest) * x for x in xij_hat(Xi, Xbest)]
         alphas.append(alphai)
-    #print alphas
     return alphas
 
 #-------------------------------------------
@@ -99,10 +101,56 @@ def target_alpha(population):
 # Begin foraging motion functions
 ############################################
 
-#TODO continue here
+def find_food(population):
+    enum = [0.0 for i in range(NUM_DIMENSIONS)]
+    denom = 0.0
+    for Xi in population:
+        enum = numpy.add(enum, [(1.0 / Xi[1]) * x for x in Xi[0]])
+        denom += 1.0 / Xi[1]
+    position = numpy.divide(enum, denom)
+    return (position, fitness(position))
+
+def beta_food(population):
+    Xfood = find_food(population)
+    Cfood = 2.0 * (1.0 - (curr_iteration / MAX_ITERATIONS))
+    betas = list()
+    for Xi in population:
+        betai = [Cfood * kij_hat(Xi, Xfood) * x for x in xij_hat(Xi, Xfood)]
+        betas.append(betai)
+    return betas
+
+def beta_best(population):
+    betas = list()
+    for Xi in population:
+        betai = [kij_hat(Xi, Xi[2:]) * x for x in xij_hat(Xi, Xi[2:])]
+        betas.append(betai)
+    return betas
 
 #-------------------------------------------
 # End foraging motion functions
+#-------------------------------------------
+
+############################################
+# Begin physical diffusion functions
+############################################
+
+def Di():
+    direction = [random.uniform(-1.0, 1.0) for i in range(NUM_DIMENSIONS)]
+    constant = D_MAX * (1.0 - (curr_iteration / MAX_ITERATIONS))
+    return [constant * x for x in direction]
+
+#-------------------------------------------
+# End physical diffusion functions
+#-------------------------------------------
+
+############################################
+# Begin motion process functions
+############################################
+
+# TODO continue here with Fi, Ni, Di and Dx/dt
+
+#-------------------------------------------
+# End motion process functions
 #-------------------------------------------
 
 ############################################
@@ -119,18 +167,28 @@ def generate_population():
         for s in range(NUM_DIMENSIONS):
             coord = random.uniform(X_MIN, X_MAX);
             genome.append(coord)
-        population.append((genome, fitness(genome)))
+        population.append((genome, fitness(genome), genome, fitness(genome)))
     set_fitness_bounds(population)
+    set_history_bounds(population)
     return population
 
 def set_fitness_bounds(population):
     global Xworst
     global Xbest
-    for i in population:
-        if i[1] < Xbest[1]:
-            Xbest = list(i)
-        elif i[1] > Xworst[1]:
-            Xworst = list(i)
+    for Xi in population:
+        if Xi[1] < Xbest[1]:
+            Xbest = Xi
+        if Xi[1] > Xworst[1]:
+            Xworst = Xi
+
+def set_history_bounds(population):
+    global Xworst_history
+    global Xbest_history
+    for Xi in population:
+        # If current fitness is better than the best in history, swap
+        if Xi[1] < Xi[3]:
+            Xi[3] = Xi[1]
+            Xi[2] = list(Xi[0])
 
 #-------------------------------------------
 # End evolutionary functions
@@ -139,5 +197,7 @@ def set_fitness_bounds(population):
 
 # Debug
 pop = generate_population()
-a = local_alpha(pop)
-b = target_alpha(pop)
+# a = local_alpha(pop)
+# b = target_alpha(pop)
+# beta_best(pop)
+# print Di()
