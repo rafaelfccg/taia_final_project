@@ -93,7 +93,7 @@ def alfa_local(krill, krill_fit, population, population_fitness):
 	return sum_vec
 
 def find_neighbors(krill, population, population_fitness):
-	ds = 0.85 * sensing_distance(krill,population)
+	ds = sensing_distance(krill,population)
 	# print "sensing_distance: " + str(ds)
 	neighbors = list()
 	neighbors_fit = list()
