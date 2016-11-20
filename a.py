@@ -2,31 +2,42 @@ import benchmarkFunctions
 import numpy
 import random
 
+MAX_ITERATIONS = 1000
 NUM_DIMENSIONS = 2
 POPULATION_SIZE = 10
 X_MAX = 32
 X_MIN = -32
 EPS = 1e-9
 
-# Global fitness values
-kworst = 1.0
-kbest = 0.1
+# Global iteration value
+curr_iteration = 1
 
+# Global fitness values
+Xworst = (list(), 0.0)
+Xbest = (list(), 1e10)
+
+############################################
 # Begin helpers
+############################################
 
 # Implemented acoording to PEP 485
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
+#-------------------------------------------
 # End helpers
+#-------------------------------------------
 
+############################################
 # Begin local alpha calculation functions
+############################################
+
 def xij_hat(Xi, Xj):
     distance = numpy.subtract(Xj[0], Xi[0])
     return numpy.divide(distance, numpy.linalg.norm(distance) + EPS)
 
 def kij_hat(Xi, Xj):
-    return float(Xi[1] - Xj[1]) / (kworst - kbest)
+    return float(Xi[1] - Xj[1]) / (Xworst[1] - Xbest[1])
 
 def sensing_distance(Xi, population):
     constant = 1.0 / (1.0 * POPULATION_SIZE)
@@ -59,17 +70,46 @@ def local_alpha(population):
             # print curr
             alphai = numpy.add(alphai, curr)
         alphas.append(alphai)
+    #print alphas
     return alphas
 
+#-------------------------------------------
 # End local alpha calculation functions
+#-------------------------------------------
 
-# Begin target alpha calculation functions
+############################################
+# Begin target alpha calculation functions #
+############################################
 
+def target_alpha(population):
+    Cbest = 2.0 * (random.uniform(0.0, 1.0) + (curr_iteration / MAX_ITERATIONS))
+    alphas = list()
+    for Xi in population:
+        alphai = list()
+        alphai = [Cbest * kij_hat(Xi, Xbest) * x for x in xij_hat(Xi, Xbest)]
+        alphas.append(alphai)
+    #print alphas
+    return alphas
 
+#-------------------------------------------
 # End target alpha calculation functions
+#-------------------------------------------
 
+############################################
+# Begin foraging motion functions
+############################################
+
+#TODO continue here
+
+#-------------------------------------------
+# End foraging motion functions
+#-------------------------------------------
+
+############################################
 # Begin evolutionary functions
+############################################
 
+# Change the benchmark function here in order to modify the fitness evaluation
 fitness = benchmarkFunctions.ackley
 
 def generate_population():
@@ -80,10 +120,24 @@ def generate_population():
             coord = random.uniform(X_MIN, X_MAX);
             genome.append(coord)
         population.append((genome, fitness(genome)))
+    set_fitness_bounds(population)
     return population
 
-# End evolutionary functions
+def set_fitness_bounds(population):
+    global Xworst
+    global Xbest
+    for i in population:
+        if i[1] < Xbest[1]:
+            Xbest = list(i)
+        elif i[1] > Xworst[1]:
+            Xworst = list(i)
 
+#-------------------------------------------
+# End evolutionary functions
+#-------------------------------------------
+
+
+# Debug
 pop = generate_population()
 a = local_alpha(pop)
-print a
+b = target_alpha(pop)

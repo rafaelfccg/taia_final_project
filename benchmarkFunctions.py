@@ -108,4 +108,4 @@ def branin(genome):
 
 
 
-print (Schwefel222([1,1]))
+#print (Schwefel222([1,1]))
