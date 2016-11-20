@@ -271,7 +271,7 @@ def evolve():
 		solutions = check_for_solution(new_population)
 		population = new_population
 
-		if (best_change_iterations > 20  or solutions > 0) and not solved:
+		if (best_change_iterations > 25  or solutions > 0) and not solved:
 			solved = True
 			CONVERGENT_INDIVIDUALS.append(solutions)
 			SOLUTION_FOUND_ITERATIONS.append(i)
