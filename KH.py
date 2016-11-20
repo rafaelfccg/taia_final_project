@@ -1,29 +1,28 @@
 import random
 import math
 import benchmarkFunctions
+import copy
 
-NUM_DIMENSIONS = 20
+NUM_DIMENSIONS = 2
 
-
-NUM_ITERATIONS = 1000
-POPULATION_SIZE = 100
+NUM_ITERATIONS = 500
+POPULATION_SIZE = 25
 
 random_range_value = 10
 
 INERTIA_NEIGHBORS = 0.9
 INERTIA_FOOD = 0.9
-CT = 0.5
+CT = 2
 
-N_MAX = 0.01
+N_MAX = 0.02
 FORAGING_SPEED = 0.02
-DIFUSION_SPEED = 0.04
+DIFUSION_SPEED = 0.002
 
-EPSILON = 10**-5
+EPSILON = 10**-3
+CONVERGENCE_PRECISION = 10**-3
 
 X_MAX = 32
 X_MIN = -32
-
-NUM_DIMENSIONS = 20
 
 fitness = benchmarkFunctions.ackley
 kbest = 10**9
@@ -34,22 +33,23 @@ CONVERGENT_EXECS = 0
 CONVERGENT_INDIVIDUALS = list()
 ALL_SOLVED_ITERATIONS = list()
 INDIVIDUALS_FITNESS = list()
+KBEST_FITNESS = list()
 
 # individual representation, (self, self_historical_best, old_N, old_F)
 def generate_population():
-    population = list()
-    for i in range(POPULATION_SIZE):
-        genome = list()
-        for s in range(NUM_DIMENSIONS):
-            individual = random.uniform(X_MIN, X_MAX);
-            genome.append(individual)
-        population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
-    return population
+	population = list()
+	for i in range(POPULATION_SIZE):
+		genome = list()
+		for s in range(NUM_DIMENSIONS):
+			individual = random.uniform(X_MIN, X_MAX);
+			genome.append(individual)
+		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
+	return population
 
 def make_rand_vector(dims):
-    vec = [random.uniform(-random_range_value, random_range_value) for i in range(dims)]
-    mag = sum(x**2 for x in vec) ** .5
-    return [x/mag for x in vec]
+	vec = [random.uniform(-random_range_value, random_range_value) for i in range(dims)]
+	mag = sum(x**2 for x in vec) ** .5
+	return [x/mag for x in vec]
 
 def zero_vector(dims):
 	return [0 for i in range(dims)]
@@ -67,7 +67,7 @@ def vector_constant_product(vector1, constant):
 	return [x_i * constant for x_i in vector1]
 
 def random_difusion(iteration):
-	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - iteration/NUM_ITERATIONS))
+	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - 3*iteration/NUM_ITERATIONS))
 
 def distance(v1, v2):
 	return norm(vector_diff(v1,v2))
@@ -93,13 +93,13 @@ def alfa_local(krill, krill_fit, population, population_fitness):
 	return sum_vec
 
 def find_neighbors(krill, population, population_fitness):
-	ds = sensing_distance(krill,population)
+	ds = 0.85 * sensing_distance(krill,population)
 	# print "sensing_distance: " + str(ds)
 	neighbors = list()
 	neighbors_fit = list()
 	for idx, x in enumerate(population):
 		individual_i = x[0]
-		distance_i = 0.9 * distance(krill,individual_i)
+		distance_i = distance(krill,individual_i)
 		# print distance_i
 		if(individual_i != krill and distance_i <= ds):
 			neighbors.append(x[0])
@@ -108,7 +108,10 @@ def find_neighbors(krill, population, population_fitness):
 	return (neighbors, neighbors_fit)
 
 def sensing_distance(krill, population):
-	return 1.0/(POPULATION_SIZE) * sum(map(lambda x : distance(x[0], krill), population))
+	val1 = sum(map(lambda x : distance(x[0], krill), population))
+
+	# print val1
+	return val1/(POPULATION_SIZE*5)
 
 def alfa_target(krill, krill_fit, best, best_fit, iteration):
 	cbest = C_best(iteration)
@@ -136,10 +139,7 @@ def food_position(population, population_fitness):
 		sum_numerator = vector_sum(sum_numerator, vector_constant_product(krill[0],fit_weight))
 		sum_denominator += fit_weight
 
-	# print sum_numerator
-	# print sum_denominator
-
-	return vector_constant_product(sum_numerator, sum_denominator)
+	return vector_constant_product(sum_numerator, 1/sum_denominator)
 
 def beta_food(krill, krill_fit, food_pos, iteration):
 	# print (food_pos)
@@ -166,7 +166,7 @@ def dX_dt(krill, krill_fit, krill_best, best, x_food, population, population_fit
 	return (vector_sum(vector_sum(Ni,Fi),Di), Ni, Fi)
 
 def move(krill, delta_t, delta_move):
-	return krill + delta_t * delta_move
+	return vector_sum( krill,vector_constant_product(delta_move, delta_t))
 
 def select_best_krill(population):
 	min_krill = population[0]
@@ -181,85 +181,141 @@ def select_best_krill(population):
 
 	return (min_krill,population_fitness)
 
-def delta_t():
-	nv = NUM_DIMENSIONS + 10
+def delta_t(population):
+	nv = NUM_DIMENSIONS
 	sumi = 0 
-	for i in range(20):
-		sumi = X_MAX- X_MIN
+	lower_bound = copy.copy(population[0][0])
+	upper_bound = copy.copy(population[0][0])
 
-	return CT*sumi
+	for x in population:
+		for xi in range(NUM_DIMENSIONS):
+			if lower_bound[xi] > x[0][xi]:
+				lower_bound[xi] = x[0][xi]
+
+			if upper_bound[xi] < x[0][xi]:
+				upper_bound[xi] = x[0][xi]
+	 
+	meanU = 0
+
+	for x in range(NUM_DIMENSIONS):
+		meanU += upper_bound[x] - lower_bound[x]
+
+	meanU /= NUM_DIMENSIONS
+	return CT * meanU*2
 
 def check_for_solution(population):
 	solutions = 0
 	for x in population:
-		if abs(fitness(x[0])) < EPSILON :
+		if abs(fitness(x[1])) < CONVERGENCE_PRECISION :
 			solutions += 1
 
 	return solutions
 
 def evolve():
-    global CONVERGENT_EXECS
-    global kworst
-    global kbest
+	global CONVERGENT_EXECS
+	global kworst
+	global kbest
+	global INERTIA_NEIGHBORS
+	global FORAGING_SPEED
 
-    population = generate_population()
-    solved = False
-    # print population
-    for i in range(NUM_ITERATIONS):
-            
-        (best_krill, population_fitness) = select_best_krill(population)
-        x_food = food_position(population, population_fitness)
-        new_population = list()
-        iteration_min_fit = min(population_fitness)
-        iteration_max_fit = max(population_fitness)
-       	if kworst < iteration_max_fit:
-       		kworst = iteration_max_fit 
+	movement_vector = list()
+	population = generate_population()
+	krill = population[0]
+	solved = False
+	
+	i = 0
+	best_change_iterations = 0
+	INERTIA_NEIGHBORS = 0.9
+	INERTIA_FOOD = 0.9
+	kworst = 0
+	kbest = 10**9
+	benchmarkFunctions.FUNCTION_EVALUATION = 0
+	while benchmarkFunctions.FUNCTION_EVALUATION < 100000 and i < NUM_ITERATIONS:
+		i += 1
+		(best_krill, population_fitness) = select_best_krill(population)
+		x_food = food_position(population, population_fitness)
+		new_population = list()
+		iteration_min_fit = min(population_fitness)
+		iteration_max_fit = max(population_fitness)
+	   	if kworst < iteration_max_fit:
+	   		kworst = iteration_max_fit 
 
-       	if kbest > iteration_min_fit: 
-       		kbest =  iteration_min_fit
+	   	if kbest > iteration_min_fit: 
+	   		kbest =  iteration_min_fit
+	   		best_change_iterations = 0
+	   	else:
+	   		best_change_iterations += 1
 
-       	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
-        
+	   	if kbest < 6:
+	   		INERTIA_NEIGHBORS *= 0.9
+	   		FORAGING_SPEED *= 0.9
+
+	   	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
+		dt = delta_t(population)
+		print dt
 		# print population
-        if i % 10 == 0 :
-        	print population_fitness 
 
-        for idx, krill in enumerate(population):
-        	krill_best = krill[1]
-        	(movement_vector, new_N, new_F) = dX_dt(krill[0], population_fitness[idx], krill_best, best_krill[0], x_food ,population, population_fitness, krill[2], krill[3],i)
-        	new_krill_position = vector_sum(krill[0] ,vector_constant_product(movement_vector ,delta_t()))
-        	
-        	# print movement_vector 
+		for idx, krill in enumerate(population):
+			krill_best = krill[1]
+			(movement_vector, new_N, new_F) = dX_dt(krill[0], population_fitness[idx], krill_best, best_krill[0], x_food ,population, population_fitness, krill[2], krill[3],i)
+			new_krill_position = vector_sum(krill[0] ,vector_constant_product(movement_vector, dt))
 
-        	if fitness(new_krill_position) < fitness(krill_best): 
-        		krill_best =  new_krill_position
+			if fitness(new_krill_position) < fitness(krill_best): 
+				krill_best =  new_krill_position
 
-        	new_population.append((new_krill_position, krill_best, new_N, new_F));
+			new_population.append((new_krill_position, krill_best, new_N, new_F));
 
-        # if USE_RECOMBINATION:
-        #     offspring = generate_offspring(population)
+		# if USE_RECOMBINATION:
+		#	 offspring = generate_offspring(population)
 
-        solutions = check_for_solution(new_population)
-        population = new_population
+		solutions = check_for_solution(new_population)
+		population = new_population
 
-        if solutions > 0 and not solved:
-            solved = True
-            CONVERGENT_INDIVIDUALS.append(solutions)
-            SOLUTION_FOUND_ITERATIONS.append(i)
-            mean_pop_fitness = mean(map(lambda x: ackley(x), population))
-            INDIVIDUALS_FITNESS.append(mean_pop_fitness)
-            CONVERGENT_EXECS+=1
-            print "Solution found after " + str(i) + " iterations"
-            print "Population fitness: " + str(mean_pop_fitness)
-            print "Convergent individuals: " + str(solutions)
-        elif solutions==100:
-            ALL_SOLVED_ITERATIONS.append(i)
-            print "All individuals converged at iter " + str(i)
-            return
+		if (best_change_iterations > 20  or solutions > 0) and not solved:
+			solved = True
+			CONVERGENT_INDIVIDUALS.append(solutions)
+			SOLUTION_FOUND_ITERATIONS.append(i)
+			print SOLUTION_FOUND_ITERATIONS
+			kbest_fit = map(lambda x: fitness(x[1]), population)
+			mean_pop_fitness = mean(kbest_fit)
+			KBEST_FITNESS.append(min(kbest_fit))
+			INDIVIDUALS_FITNESS.append(mean_pop_fitness)
+			CONVERGENT_EXECS+=1
+			print "Solution found after " + str(i) + " iterations"
+			print "Population fitness: " + str(mean_pop_fitness)
+			print "Convergent individuals: " + str(solutions)
+			return;
 
-    print "No solution found after " + str(NUM_ITERATIONS) + " iterations"
+def mean(list_items):
+    return sum(list_items)/float(len(list_items))
+
+def std_dev(list_items, mean_items):
+    variance_list = map(lambda x : pow(x-mean_items, 2), list_items)
+    return math.sqrt(sum(variance_list)/float(len(list_items)))
+
+def main():
+    for i in range(50):
+        print "Execution " + str(i)
+        evolve()
+        print ""
+
+    mean_iterations = mean(SOLUTION_FOUND_ITERATIONS)
+    mean_fitness = mean(INDIVIDUALS_FITNESS)
+    mean_individuals = mean(CONVERGENT_INDIVIDUALS)
+    
+    print "Convergent executions: " + str(CONVERGENT_EXECS)
+    print "Mean of iterations: " + str(mean_iterations)
+    # print "Std of iterations: " + str(std_dev(SOLUTION_FOUND_ITERATIONS, mean_iterations))
+    print "Mean of fitness: " + str(mean_fitness)
+    print "Std of fitness: " + str(std_dev(INDIVIDUALS_FITNESS, mean_fitness))
+    print "Mean of convergent indivs: " + str(mean_individuals)
+    print "Std of convergent indivs: " + str(std_dev(CONVERGENT_INDIVIDUALS, mean_individuals))
+    print "Best solution found " + str(min(KBEST_FITNESS))
+    print "Mean solution found " + str(mean(KBEST_FITNESS))
+    # print "Mean of total convergence iterations: " + str(mean_iter_total)
+    
 
 
-evolve()
+main()
 
 

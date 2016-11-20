@@ -1,11 +1,13 @@
 import math
 import sys
 
+FUNCTION_EVALUATION = 0
+
 def product(list):
-    p = 1
-    for i in list:
-        p *= i
-    return p
+	p = 1
+	for i in list:
+		p *= i
+	return p
 
 ackley_max_x = 32
 ackley_min_x = -32
@@ -31,12 +33,14 @@ sphere_min_x = -100
 # 20 dimensions
 # minimum 0
 def ackley(genome):
-    n = len(genome)
-    sum1 = sum(map(lambda x : x ** 2, genome))
-    sum2 = sum(map(lambda x : math.cos(2 * math.pi * x), genome))
-    a = -0.2 * math.sqrt((1.0 / n) * sum1)
-    b = (1.0 / n) * sum2
-    return -20 * math.exp(a) - math.exp(b) + 20 + math.e
+	global FUNCTION_EVALUATION
+	FUNCTION_EVALUATION += 1
+	n = len(genome)
+	sum1 = sum(map(lambda x : x ** 2, genome))
+	sum2 = sum(map(lambda x : math.cos(2 * math.pi * x), genome))
+	a = -0.2 * math.sqrt((1.0 / n) * sum1)
+	b = (1.0 / n) * sum2
+	return -20 * math.exp(a) - math.exp(b) + 20 + math.e
 
 # minimum 0
 def griewank (genome):
