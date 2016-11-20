@@ -45,10 +45,11 @@ def generate_population():
 			genome.append(individual)
 		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
 	return population
-
+#####
+# Auxliar Functions
+###
 def make_rand_vector(dims):
 	vec = [random.uniform(-random_range_value, random_range_value) for i in range(dims)]
-	#mag = sum(x**2 for x in vec) ** .5
 	return [x for x in vec]
 
 def zero_vector(dims):
@@ -66,11 +67,19 @@ def vector_sum(vector1, vector2):
 def vector_constant_product(vector1, constant):
 	return [x_i * constant for x_i in vector1]
 
+def distance(v1, v2):
+	return norm(vector_diff(v1,v2))
+
+#####
+# Random Difusion
+###
+
 def random_difusion(iteration):
 	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - 3*iteration/NUM_ITERATIONS))
 
-def distance(v1, v2):
-	return norm(vector_diff(v1,v2))
+#####
+# Ni 
+###
 
 def k_hat(ki, kj):
 	global kworst
@@ -81,6 +90,9 @@ def x_hat(xi, xj):
 	diff = vector_diff(xj,xi)
 	norm_diff = norm(diff)
 	return [x/(norm_diff + EPSILON) for x in diff]
+
+def k_x_hat_product(krill_i,krill_j,fitness_i, fitness_j):
+	return vector_constant_product(x_hat(krill_i, krill_j), k_hat(fitness_i, fitness_j))
 
 def alfa_local(krill, krill_fit, population, population_fitness):
 	(neighbors, neighbors_fit) = find_neighbors(krill, population, population_fitness)
@@ -117,9 +129,6 @@ def alfa_target(krill, krill_fit, best, best_fit, iteration):
 	cbest = C_best(iteration)
 	return vector_constant_product(k_x_hat_product(krill, best, krill_fit, best_fit),  cbest)
 
-def k_x_hat_product(krill_i,krill_j,fitness_i, fitness_j):
-	return vector_constant_product(x_hat(krill_i, krill_j), k_hat(fitness_i, fitness_j))
-
 def alfa(krill, krill_fit, best, population, population_fitness, iteration):
 	best_fit = fitness(best)
 	local = alfa_local(krill, krill_fit, population, population_fitness)
@@ -130,6 +139,13 @@ def alfa(krill, krill_fit, best, population, population_fitness, iteration):
 
 def C_best(iteration):
 	return 2 * (random.uniform(0,1) + iteration/NUM_ITERATIONS)
+
+def neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration):
+	return vector_sum(vector_constant_product(alfa(krill, krill_fit, best, population, population_fitness, iteration), N_MAX), vector_constant_product(old_N, INERTIA_NEIGHBORS))
+
+#####
+# Fi 
+###
 
 def food_position(population, population_fitness):
 	sum_denominator = 0
@@ -149,14 +165,15 @@ def beta_food(krill, krill_fit, food_pos, iteration):
 def C_food(iteration):
 	return 2*(1 - iteration/NUM_ITERATIONS)
 
-def neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration):
-	return vector_sum(vector_constant_product(alfa(krill, krill_fit, best, population, population_fitness, iteration), N_MAX), vector_constant_product(old_N, INERTIA_NEIGHBORS))
-
 def beta(krill, krill_fit, krill_best, x_food, population, population_fitness, iteration):
 	return vector_sum( beta_food(krill, krill_fit, x_food, iteration), k_x_hat_product(krill, krill_best, krill_fit, fitness(krill_best)))
 
 def food_induced_mov(krill, krill_fit, krill_best, x_food, population, population_fitness, old_F, iteration):
 	return vector_sum(vector_constant_product(beta(krill, krill_fit, krill_best, x_food, population, population_fitness, iteration), FORAGING_SPEED), vector_constant_product(old_F, INERTIA_FOOD))
+
+#####
+# Movement 
+###
 
 def dX_dt(krill, krill_fit, krill_best, best, x_food, population, population_fitness, old_N, old_F, iteration):
 	Ni = neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration) 
@@ -181,27 +198,35 @@ def select_best_krill(population):
 
 	return (min_krill,population_fitness)
 
-def delta_t(population):
-	# sumi = 0 
-	# lower_bound = copy.copy(population[0][0])
-	# upper_bound = copy.copy(population[0][0])
+def delta_t(population, explore):
+	sumi = 0 
+	lower_bound = copy.copy(population[0][0])
+	upper_bound = copy.copy(population[0][0])
+	c_t = CT
+	if not explore:
+		c_t /= 2
+		lower_bound = copy.copy(population[0][0])
+		upper_bound = copy.copy(population[0][0])
 
-	# for x in population:
-	# 	for xi in range(NUM_DIMENSIONS):
-	# 		if lower_bound[xi] > x[0][xi]:
-	# 			lower_bound[xi] = x[0][xi]
+		for x in population:
+			for xi in range(NUM_DIMENSIONS):
+				if lower_bound[xi] > x[0][xi]:
+					lower_bound[xi] = x[0][xi]
 
-	# 		if upper_bound[xi] < x[0][xi]:
-	# 			upper_bound[xi] = x[0][xi]
+				if upper_bound[xi] < x[0][xi]:
+					upper_bound[xi] = x[0][xi]
 	 
 	meanU = list()
 
 	for x in range(NUM_DIMENSIONS):
-		meanU.append(X_MAX -X_MIN)
+		if not explore:
+			meanU.append(2*(upper_bound[x] - lower_bound[x]))
+		else:
+			meanU.append(X_MAX - X_MIN)
 
 	# list.sort(meanU)
 	# print(meanU)
-	return CT *  sum(meanU)
+	return c_t *  sum(meanU)
 
 def check_for_solution(population):
 	solutions = 0
@@ -243,6 +268,7 @@ def evolve():
 	   	if kbest > iteration_min_fit: 
 	   		kbest =  iteration_min_fit
 	   		best_change_iterations = 0
+	   		DIFUSION_SPEED = 0.005
 	   	else:
 	   		best_change_iterations += 1
 
@@ -250,10 +276,22 @@ def evolve():
 		INERTIA_FOOD = 0.1 + 0.8 * (1 - i/NUM_ITERATIONS)
 
 	   	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
-		dt = delta_t(population)
-		print dt
-		# print population
 
+		dt = delta_t(population, i < 500)
+
+		flag_test = False
+		if best_change_iterations > 20 and i < 500:
+			best_change_iterations = 0
+			DIFUSION_SPEED *= 10 
+			flag_test = True;
+		
+		# if i > 500:
+		# 	dt /= 10
+
+		# if i > 750:
+		# 	dt /= 100
+
+		print dt
 		for idx, krill in enumerate(population):
 			krill_best = krill[1]
 			(movement_vector, new_N, new_F) = dX_dt(krill[0], population_fitness[idx], krill_best, best_krill[0], x_food ,population, population_fitness, krill[2], krill[3],i)
@@ -263,12 +301,13 @@ def evolve():
 				krill_best =  new_krill_position
 
 			new_population.append((new_krill_position, krill_best, new_N, new_F));
-
-		# if USE_RECOMBINATION:
-		#	 offspring = generate_offspring(population)
-
 		
 		population = new_population
+		print "########################"
+		if flag_test:
+			flag_test = False
+			DIFUSION_SPEED = 0.005
+			# print population
 
 	solutions = check_for_solution(new_population)
 	solved = True
@@ -295,7 +334,7 @@ def std_dev(list_items, mean_items):
     return math.sqrt(sum(variance_list)/float(len(list_items)))
 
 def main():
-    for i in range(50):
+    for i in range(5):
         print "Execution " + str(i)
         evolve()
         print ""
@@ -315,8 +354,6 @@ def main():
     print "Mean solution found " + str(mean(KBEST_FITNESS))
     # print "Mean of total convergence iterations: " + str(mean_iter_total)
     
-
-
 main()
 
 
