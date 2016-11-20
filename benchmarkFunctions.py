@@ -32,8 +32,8 @@ sphere_min_x = -100
 # minimum 0
 def ackley(genome):
     n = len(genome)
-    sum1 = sum(map(lambda x : x ** 2, genome))
-    sum2 = sum(map(lambda x : math.cos(2 * math.pi * x), genome))
+    sum1 = sum(map(lambda x : x ** 2.0, genome))
+    sum2 = float(sum(map(lambda x : math.cos(2.0 * math.pi * x), genome)))
     a = -0.2 * math.sqrt((1.0 / n) * sum1)
     b = (1.0 / n) * sum2
     return -20 * math.exp(a) - math.exp(b) + 20 + math.e

@@ -4,17 +4,23 @@ import random
 
 MAX_ITERATIONS = 1000
 NUM_DIMENSIONS = 2
-POPULATION_SIZE = 10
+POPULATION_SIZE = 50
+NUM_TRIALS = 50
 
-X_MAX = 32
-X_MIN = -32
+X_MAX = 32.0
+X_MIN = -32.0
 
-EPS = 1e-9
+EPS = 1e-5
 
-D_MAX = 0.002
+D_MAX = 0.005
+N_MAX = 0.01
+OMEGA_N = 0.9
+OMEGA_F = 0.9
+V_f = 0.02
+C_t = 0.5
 
 # Global iteration value
-curr_iteration = 1
+curr_iteration = 0
 
 # Global fitness values
 Xworst = (list(), 0.0, list(), 0.0)
@@ -44,7 +50,7 @@ def kij_hat(Xi, Xj):
     return float(Xi[1] - Xj[1]) / (Xworst[1] - Xbest[1])
 
 def sensing_distance(Xi, population):
-    constant = 1.0 / (1.0 * POPULATION_SIZE)
+    constant = 1.0 / (5.0 * POPULATION_SIZE)
     distance = 0.0
     for Xj in population:
         distance += numpy.linalg.norm(numpy.subtract(Xi[0], Xj[0]))
@@ -58,23 +64,17 @@ def detect_neighbours(Xi, d, population):
             neighbours.append(Xj)
     return neighbours
 
+# Each alpha is a P-sized list where each element is an N-dimensional array
 def local_alpha(population):
     alphas = list()
     for Xi in population:
-        #print Xi
         alphai = [0.0 for i in range(NUM_DIMENSIONS)]
         distance = sensing_distance(Xi, population)
-        #print "distance " + str(distance)
         neighbours = detect_neighbours(Xi, distance, population)
-        #print "neighbours "+ str(neighbours)
         for Xj in neighbours:
             curr = [kij_hat(Xi, Xj) * x for x in xij_hat(Xi, Xj)]
-            # print xij_hat(Xi, Xj)
-            # print kij_hat(Xi, Xj)
-            # print curr
             alphai = numpy.add(alphai, curr)
         alphas.append(alphai)
-    #print alphas
     return alphas
 
 #-------------------------------------------
@@ -85,8 +85,9 @@ def local_alpha(population):
 # Begin target alpha calculation functions #
 ############################################
 
+# Each alpha is a P-sized list where each element is an N-dimensional array
 def target_alpha(population):
-    Cbest = 2.0 * (random.uniform(0.0, 1.0) + (curr_iteration / MAX_ITERATIONS))
+    Cbest = 2.0 * (random.uniform(0.0, 1.0) + (float(curr_iteration) / MAX_ITERATIONS))
     alphas = list()
     for Xi in population:
         alphai = [Cbest * kij_hat(Xi, Xbest) * x for x in xij_hat(Xi, Xbest)]
@@ -110,15 +111,17 @@ def find_food(population):
     position = numpy.divide(enum, denom)
     return (position, fitness(position))
 
+# Each beta is a P-sized list where each element is an N-dimensional array
 def beta_food(population):
     Xfood = find_food(population)
-    Cfood = 2.0 * (1.0 - (curr_iteration / MAX_ITERATIONS))
+    Cfood = 2.0 * (1.0 - (float(curr_iteration) / MAX_ITERATIONS))
     betas = list()
     for Xi in population:
         betai = [Cfood * kij_hat(Xi, Xfood) * x for x in xij_hat(Xi, Xfood)]
         betas.append(betai)
     return betas
 
+# Each beta is a P-sized list where each element is an N-dimensional array
 def beta_best(population):
     betas = list()
     for Xi in population:
@@ -136,7 +139,7 @@ def beta_best(population):
 
 def Di():
     direction = [random.uniform(-1.0, 1.0) for i in range(NUM_DIMENSIONS)]
-    constant = D_MAX * (1.0 - (curr_iteration / MAX_ITERATIONS))
+    constant = D_MAX * (1.0 - (float(curr_iteration) / MAX_ITERATIONS))
     return [constant * x for x in direction]
 
 #-------------------------------------------
@@ -147,7 +150,93 @@ def Di():
 # Begin motion process functions
 ############################################
 
-# TODO continue here with Fi, Ni, Di and Dx/dt
+# Each Ni is n P-sized list where each element is an N-dimensional array
+def Ni(population, Ni_old):
+    N = list()
+    alphas = numpy.add(local_alpha(population), target_alpha(population))
+    for i in range(len(population)):
+        Ni_ = numpy.add([N_MAX * x for x in alphas[i]], 
+                        [OMEGA_N * x for x in Ni_old[i]])
+        N.append(Ni_)
+    return N
+
+# Each Fi is n P-sized list where each element is an N-dimensional array
+def Fi(population, Fi_old):
+    F = list()
+    betas = numpy.add(beta_food(population), beta_best(population))
+    #betas = beta_food(population)
+    for i in range(len(population)):
+        Fi_ = numpy.add([V_f * x for x in betas[i]],
+                        [OMEGA_F * x for x in Fi_old[i]])
+        F.append(Fi_)
+    return F
+
+def dt(population):
+    upper_bounds = list()
+    lower_bounds = list()
+    for i in range(NUM_DIMENSIONS):
+        upper = -1e10
+        lower = 1e10
+        for Xi in population:
+            if Xi[0][i] > upper:
+                upper = Xi[0][i]
+            if Xi[0][i] < lower:
+                lower = Xi[0][i]
+        upper_bounds.append(upper)
+        lower_bounds.append(lower)
+    return C_t * sum(numpy.subtract(upper_bounds, lower_bounds))
+
+def move():
+    global curr_iteration
+    global OMEGA_F
+    global OMEGA_N
+    global Xworst
+    global Xbest
+
+    Xworst = (list(), 0.0, list(), 0.0)
+    Xbest = (list(), 1e10, list(), 1e10)
+    
+    curr_iteration = 0.0
+
+    population = generate_population()
+    zero = [0.0 for i in range(NUM_DIMENSIONS)]
+    Ni_old = [list(zero) for i in range(POPULATION_SIZE)]
+    Fi_old = [list(zero) for i in range(POPULATION_SIZE)]
+
+    for it in range(MAX_ITERATIONS):
+        #print "#" + str(it) + " Best: " + str(Xbest[1]) + " Worst: " + str(Xworst[1])
+
+        # Fitness evaluation
+        set_fitness_bounds(population)
+        set_history_fitness_bounds(population)
+
+        # Calculate motion
+        Ni_curr = list(Ni(population, Ni_old))
+        Fi_curr = list(Fi(population, Ni_old))
+        dX_dt = numpy.add(Ni_curr, Fi_curr)
+        dX_dt = numpy.add(dX_dt, [Di() for n in range(POPULATION_SIZE)])
+        Ni_old = list(Ni_curr)
+        Fi_old = list(Fi_curr)
+
+        # Update positions
+        new_population = list()
+        dt_ = dt(population)
+        for i in range(POPULATION_SIZE):
+            step = [dt_ * x for x in dX_dt[i]]
+            Xi_new = list(population[i])
+            Xi_new[0] = numpy.add(Xi_new[0], step)
+            Xi_new[1] = fitness(Xi_new[0])
+            new_population.append(tuple(Xi_new))
+
+        population = list(new_population)
+        # Linearly decrease inertia
+        OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+        OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+
+        # Go to next iteration
+        curr_iteration += 1
+    return (population, Xbest)
+
 
 #-------------------------------------------
 # End motion process functions
@@ -160,6 +249,8 @@ def Di():
 # Change the benchmark function here in order to modify the fitness evaluation
 fitness = benchmarkFunctions.ackley
 
+# Each genome follows this pattern:
+# (<n-dimensional position>, <fitness>, <best position in history>, <best fitness in history>)
 def generate_population():
     population = list()
     for i in range(POPULATION_SIZE):
@@ -169,7 +260,7 @@ def generate_population():
             genome.append(coord)
         population.append((genome, fitness(genome), genome, fitness(genome)))
     set_fitness_bounds(population)
-    set_history_bounds(population)
+    set_history_fitness_bounds(population)
     return population
 
 def set_fitness_bounds(population):
@@ -181,23 +272,34 @@ def set_fitness_bounds(population):
         if Xi[1] > Xworst[1]:
             Xworst = Xi
 
-def set_history_bounds(population):
-    global Xworst_history
-    global Xbest_history
+def set_history_fitness_bounds(population):
     for Xi in population:
+        Xi_ = list(Xi)
         # If current fitness is better than the best in history, swap
         if Xi[1] < Xi[3]:
-            Xi[3] = Xi[1]
-            Xi[2] = list(Xi[0])
+            Xi_[3] = Xi[1]
+            Xi_[2] = list(Xi[0])
+        Xi = tuple(Xi_)
 
 #-------------------------------------------
 # End evolutionary functions
 #-------------------------------------------
 
+def run_trials(num_trials):
+    best = 1e10
+    avg = 0.0
+    std = 0.0
+    for i in range(num_trials):
+        print "Running trial #" + str(i)
+        (p, b) = move()
+        best = min(b[1], best)
+        avg += numpy.mean([x[1] for x in p])
+        std += numpy.std([x[1] for x in p])
+    avg = avg / num_trials
+    std = std / num_trials
+    print "Best out of " + str(num_trials) + " runs: " + str(best)
+    print "Average out of " + str(num_trials) + "runs: " + str(avg)
+    print "Std. dev out of " + str(num_trials) + "runs: " + str(std)
 
-# Debug
-pop = generate_population()
-# a = local_alpha(pop)
-# b = target_alpha(pop)
-# beta_best(pop)
-# print Di()
+
+run_trials(NUM_TRIALS)
