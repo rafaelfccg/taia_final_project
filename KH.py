@@ -3,22 +3,22 @@ import math
 import benchmarkFunctions
 import copy
 
-NUM_DIMENSIONS = 2
+NUM_DIMENSIONS = 20
 
-NUM_ITERATIONS = 500
-POPULATION_SIZE = 25
+NUM_ITERATIONS = 1000
+POPULATION_SIZE = 50
 
-random_range_value = 10
+random_range_value = 1
 
 INERTIA_NEIGHBORS = 0.9
 INERTIA_FOOD = 0.9
-CT = 2
+CT = 0.5
 
 N_MAX = 0.02
 FORAGING_SPEED = 0.02
-DIFUSION_SPEED = 0.002
+DIFUSION_SPEED = 0.005
 
-EPSILON = 10**-3
+EPSILON = 10**-5
 CONVERGENCE_PRECISION = 10**-3
 
 X_MAX = 32
@@ -48,8 +48,8 @@ def generate_population():
 
 def make_rand_vector(dims):
 	vec = [random.uniform(-random_range_value, random_range_value) for i in range(dims)]
-	mag = sum(x**2 for x in vec) ** .5
-	return [x/mag for x in vec]
+	#mag = sum(x**2 for x in vec) ** .5
+	return [x for x in vec]
 
 def zero_vector(dims):
 	return [0 for i in range(dims)]
@@ -182,26 +182,26 @@ def select_best_krill(population):
 	return (min_krill,population_fitness)
 
 def delta_t(population):
-	nv = NUM_DIMENSIONS
-	sumi = 0 
-	lower_bound = copy.copy(population[0][0])
-	upper_bound = copy.copy(population[0][0])
+	# sumi = 0 
+	# lower_bound = copy.copy(population[0][0])
+	# upper_bound = copy.copy(population[0][0])
 
-	for x in population:
-		for xi in range(NUM_DIMENSIONS):
-			if lower_bound[xi] > x[0][xi]:
-				lower_bound[xi] = x[0][xi]
+	# for x in population:
+	# 	for xi in range(NUM_DIMENSIONS):
+	# 		if lower_bound[xi] > x[0][xi]:
+	# 			lower_bound[xi] = x[0][xi]
 
-			if upper_bound[xi] < x[0][xi]:
-				upper_bound[xi] = x[0][xi]
+	# 		if upper_bound[xi] < x[0][xi]:
+	# 			upper_bound[xi] = x[0][xi]
 	 
-	meanU = 0
+	meanU = list()
 
 	for x in range(NUM_DIMENSIONS):
-		meanU += upper_bound[x] - lower_bound[x]
+		meanU.append(X_MAX -X_MIN)
 
-	meanU /= NUM_DIMENSIONS
-	return CT * meanU*2
+	# list.sort(meanU)
+	# print(meanU)
+	return CT *  sum(meanU)
 
 def check_for_solution(population):
 	solutions = 0
@@ -230,7 +230,7 @@ def evolve():
 	kworst = 0
 	kbest = 10**9
 	benchmarkFunctions.FUNCTION_EVALUATION = 0
-	while benchmarkFunctions.FUNCTION_EVALUATION < 100000 and i < NUM_ITERATIONS:
+	while i < NUM_ITERATIONS:
 		i += 1
 		(best_krill, population_fitness) = select_best_krill(population)
 		x_food = food_position(population, population_fitness)
@@ -246,9 +246,8 @@ def evolve():
 	   	else:
 	   		best_change_iterations += 1
 
-	   	if kbest < 6:
-	   		INERTIA_NEIGHBORS *= 0.9
-	   		FORAGING_SPEED *= 0.9
+		INERTIA_NEIGHBORS = 0.1 + 0.8 * (1 - i/NUM_ITERATIONS)
+		INERTIA_FOOD = 0.1 + 0.8 * (1 - i/NUM_ITERATIONS)
 
 	   	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
 		dt = delta_t(population)
@@ -268,23 +267,25 @@ def evolve():
 		# if USE_RECOMBINATION:
 		#	 offspring = generate_offspring(population)
 
-		solutions = check_for_solution(new_population)
+		
 		population = new_population
 
-		if (best_change_iterations > 25  or solutions > 0) and not solved:
-			solved = True
-			CONVERGENT_INDIVIDUALS.append(solutions)
-			SOLUTION_FOUND_ITERATIONS.append(i)
-			print SOLUTION_FOUND_ITERATIONS
-			kbest_fit = map(lambda x: fitness(x[1]), population)
-			mean_pop_fitness = mean(kbest_fit)
-			KBEST_FITNESS.append(min(kbest_fit))
-			INDIVIDUALS_FITNESS.append(mean_pop_fitness)
-			CONVERGENT_EXECS+=1
-			print "Solution found after " + str(i) + " iterations"
-			print "Population fitness: " + str(mean_pop_fitness)
-			print "Convergent individuals: " + str(solutions)
-			return;
+	solutions = check_for_solution(new_population)
+	solved = True
+	CONVERGENT_INDIVIDUALS.append(solutions)
+	SOLUTION_FOUND_ITERATIONS.append(i)
+	print SOLUTION_FOUND_ITERATIONS
+	kbest_fit = map(lambda x: fitness(x[1]), population)
+	mean_pop_fitness = mean(kbest_fit)
+	KBEST_FITNESS.append(min(kbest_fit))
+
+	INDIVIDUALS_FITNESS.append(mean_pop_fitness)
+	CONVERGENT_EXECS+=1
+	print "best "+ str(population[kbest_fit.index(min(kbest_fit))][1])
+	print "Solution found after " + str(i) + " iterations"
+	print "Population fitness: " + str(mean_pop_fitness)
+	print "Convergent individuals: " + str(solutions)
+	
 
 def mean(list_items):
     return sum(list_items)/float(len(list_items))
