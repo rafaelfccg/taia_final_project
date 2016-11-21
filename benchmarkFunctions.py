@@ -1,5 +1,6 @@
 import math
 import sys
+import operator
 
 FUNCTION_EVALUATION = 0
 
@@ -35,20 +36,19 @@ sphere_min_x = -100
 def ackley(genome):
 	global FUNCTION_EVALUATION
 	FUNCTION_EVALUATION += 1
-	n = len(genome)
 	sum1 = sum(map(lambda x : x ** 2, genome))
 	sum2 = sum(map(lambda x : math.cos(2 * math.pi * x), genome))
-	a = -0.2 * math.sqrt((1.0 / n) * sum1)
-	b = (1.0 / n) * sum2
+	n = len(genome)
+	a = -0.2 * math.sqrt(sum1/n)
+	b = (sum2/n)
 	return -20 * math.exp(a) - math.exp(b) + 20 + math.e
 
 # minimum 0
 def griewank (genome):
 	n = len(genome)
 	sumi = 1 + (sum(map(lambda x : x ** 2, genome)))/4000
-	prod = 1;
-	for i in range(n):
-		prod = math.cos(genome[i]/i)
+	prod_vector = [math.cos(genome[i]/math.sqrt(i)) for i in range(n)]
+	prod = reduce(operator.mul, prod_vector, 1)
 
 	return sumi - prod
 
@@ -61,9 +61,7 @@ def rastrigin (genome):
 # minimum 0
 def rosenbrock(genome):
 	n = len(genome)
-	sumi = 0
-	for i in range(n-1):
-		sumi += 100 * (genome[i+1] - genome[i]**2)**2 + (genome[i] - 1)**2
+	sumi = sum([100 * (genome[i+1] - genome[i]**2)**2 + (genome[i] - 1)**2 for i in range(n-1)])
 	return sumi
 
 # minimum 0
@@ -71,7 +69,8 @@ def Schwefel226(genome):
 	return (sum(map(lambda x : -x * math.sin(math.sqrt(math.fabs(x))), genome)))
 
 def Schwefel222(genome):
-	return sum(map(lambda x : math.fabs(x), genome)) + product(map(lambda x : math.fabs(x), genome))
+	modified_genome = map(lambda x : math.fabs(x), genome)
+	return sum(modified_genome) + product(modified_genome)
 
 def Sphere(genome):
 	return math.sqrt(sum(map(lambda x : x**2, genome)))
@@ -108,8 +107,5 @@ def branin(genome):
 # 	for x in xrange(1,10):
 # 		pass
 # 	return
-
-
-
 
 print (Schwefel222([1,1]))
