@@ -8,6 +8,8 @@ NUM_DIMENSIONS = 20
 NUM_ITERATIONS = 1000
 POPULATION_SIZE = 50
 
+START_EXPLOTATION = 600
+
 random_range_value = 1
 
 INERTIA_NEIGHBORS = 0.9
@@ -277,19 +279,21 @@ def evolve():
 
 	   	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
 
-		dt = delta_t(population, i < 500)
+	   	isExploration = int(i/50)%2 == 0
+	   	print isExploration
+		dt = delta_t(population, isExploration)
 
 		flag_test = False
-		if best_change_iterations > 20 and i < 500:
+		if best_change_iterations > 20:
 			best_change_iterations = 0
 			DIFUSION_SPEED *= 10 
 			flag_test = True;
 		
-		# if i > 500:
-		# 	dt /= 10
+		if i > 500:
+			dt /= 3
 
 		# if i > 750:
-		# 	dt /= 100
+		# 	dt /= 3
 
 		print dt
 		for idx, krill in enumerate(population):
