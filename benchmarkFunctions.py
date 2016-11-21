@@ -47,7 +47,7 @@ def ackley(genome):
 def griewank (genome):
 	n = len(genome)
 	sumi = 1 + (sum(map(lambda x : x ** 2, genome)))/4000
-	prod_vector = [math.cos(genome[i]/math.sqrt(i)) for i in range(n)]
+	prod_vector = [math.cos(genome[i]/math.sqrt(i+1)) for i in range(n)]
 	prod = reduce(operator.mul, prod_vector, 1)
 
 	return sumi - prod
