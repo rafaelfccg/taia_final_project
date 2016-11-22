@@ -9,6 +9,8 @@ NUM_TRIALS = 50
 
 X_MAX = 32.0
 X_MIN = -32.0
+Y_MAX = 32.0
+Y_MIN = -32.0
 
 EPS = 1e-5
 
@@ -33,6 +35,27 @@ Xbest = (list(), 1e10, list(), 1e10)
 # Implemented according to PEP 485
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+def initialize_function(benchmark_params):
+    global fitness
+    global X_MIN
+    global X_MAX
+    global EPS
+    global NUM_DIMENSIONS
+
+    fitness = benchmark_params[0]
+    NUM_DIMENSIONS = benchmark_params[1]
+    EPS = benchmark_params[2]
+    X_MIN = benchmark_params[3]
+    X_MAX = benchmark_params[4]
+
+    if fitness == benchmarkFunctions.branin:
+        global Y_MIN
+        global Y_MAX
+        global generate_population
+        Y_MIN = benchmark_params[5]
+        Y_MAX = benchmark_params[6]
+        generate_population = generate_population_branin
 
 #-------------------------------------------
 # End helpers
@@ -246,7 +269,7 @@ def move():
 # Begin evolutionary functions
 ############################################
 
-# Change the benchmark function here in order to modify the fitness evaluation
+# Change the benchmark function in the main() call in order to modify the fitness evaluation
 fitness = benchmarkFunctions.ackley
 
 # Each genome follows this pattern:
@@ -258,6 +281,18 @@ def generate_population():
         for s in range(NUM_DIMENSIONS):
             coord = random.uniform(X_MIN, X_MAX);
             genome.append(coord)
+        population.append((genome, fitness(genome), genome, fitness(genome)))
+    set_fitness_bounds(population)
+    set_history_fitness_bounds(population)
+    return population
+
+def generate_population_branin():
+    population = list()
+    for i in range(POPULATION_SIZE):
+        genome = list()
+        coord1 = random.uniform(X_MIN, X_MAX)
+        coord2 = random.uniform(Y_MIN, Y_MAX);
+        genome.extend([coord1,coord2])
         population.append((genome, fitness(genome), genome, fitness(genome)))
     set_fitness_bounds(population)
     set_history_fitness_bounds(population)
@@ -285,21 +320,37 @@ def set_history_fitness_bounds(population):
 # End evolutionary functions
 #-------------------------------------------
 
-def run_trials(num_trials):
+def main(num_trials, function_params):
+    initialize_function(function_params)
     best = 1e10
     avg = 0.0
     std = 0.0
     for i in range(num_trials):
-        print "Running trial #" + str(i)
+        print "Running trial #" + str(i+1)
         (p, b) = move()
         best = min(b[1], best)
+        print b[1]
         avg += numpy.mean([x[1] for x in p])
         std += numpy.std([x[1] for x in p])
     avg = avg / num_trials
     std = std / num_trials
     print "Best out of " + str(num_trials) + " runs: " + str(best)
-    print "Average out of " + str(num_trials) + "runs: " + str(avg)
-    print "Std. dev out of " + str(num_trials) + "runs: " + str(std)
+    print "Average out of " + str(num_trials) + " runs: " + str(avg)
+    print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
 
-
-run_trials(NUM_TRIALS)
+#print "ACKLEY"
+#main(3, benchmarkFunctions.ACKLEY())
+#print "GRIEWANK"
+#main(3, benchmarkFunctions.GRIEWANK())
+#print "RASTRIGIN"
+#main(3, benchmarkFunctions.RASTRIGIN())
+#print "ROSENBROCK"
+#main(3, benchmarkFunctions.ROSENBROCK())
+#print "SCHEWEFEL 226"
+#main(3, benchmarkFunctions.SCHWEFEL226())
+#print "SCHEWEFEL 222"
+#main(3, benchmarkFunctions.SCHWEFEL222())
+print "SPHERE"
+main(3, benchmarkFunctions.SPHERE())
+print "BRANIN"
+main(3, benchmarkFunctions.BRANIN())
