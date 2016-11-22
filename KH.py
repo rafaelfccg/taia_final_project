@@ -23,11 +23,11 @@ DIFUSION_SPEED = 0.005
 EPSILON = 10**-5
 CONVERGENCE_PRECISION = 10**-3
 
-X_MAX = 32
-X_MIN = -32
+X_MAX = 100
+X_MIN = -100
 
-fitness = benchmarkFunctions.ackley
-kbest = 10**9
+fitness = benchmarkFunctions.Schwefel222
+kbest = 10**40
 kworst = 0
 
 SOLUTION_FOUND_ITERATIONS = list()
@@ -189,7 +189,7 @@ def move(krill, delta_t, delta_move):
 
 def select_best_krill(population):
 	min_krill = population[0]
-	min_fitness = 10**9
+	min_fitness = 10**40
 	population_fitness = list()
 	for x in population:
 		curr_fit = fitness(x[0])
@@ -244,6 +244,7 @@ def evolve():
 	global kbest
 	global INERTIA_NEIGHBORS
 	global FORAGING_SPEED
+	global DIFUSION_SPEED
 
 	movement_vector = list()
 	population = generate_population()
@@ -255,7 +256,7 @@ def evolve():
 	INERTIA_NEIGHBORS = 0.9
 	INERTIA_FOOD = 0.9
 	kworst = 0
-	kbest = 10**9
+	kbest = 10**40
 	benchmarkFunctions.FUNCTION_EVALUATION = 0
 	while i < NUM_ITERATIONS:
 		i += 1
