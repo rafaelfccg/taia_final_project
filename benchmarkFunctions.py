@@ -117,6 +117,16 @@ def branin(genome):
 def BRANIN():
 	return [branin, 2, 5/(4*math.pi), branin_min_x, branin_max_x, branin_min_y, branin_max_y]
 
+alpine_min_x = -10
+alpine_max_x = 10
+
+#minimum 0
+def alpine(genome):
+	return sum(map(lambda xi: math.fabs(xi*math.sin(xi)+0.1*xi), genome))
+
+def ALPINE():
+	return [alpine, 4, 10**-3, alpine_min_x, alpine_max_x]
+
 # # dimensions 4
 # PS: Ta faltando valores na tabela de hartman1 que ele menciona no artigo
 # hartman1_max_x = 1
