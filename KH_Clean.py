@@ -36,7 +36,7 @@ Xbest = (list(), 1e10, list(), 1e10)
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
-def initialize_function(benchmark_params):
+def initialize_function(benchmark_params, dims):
     global fitness
     global X_MIN
     global X_MAX
@@ -44,7 +44,10 @@ def initialize_function(benchmark_params):
     global NUM_DIMENSIONS
 
     fitness = benchmark_params[0]
-    NUM_DIMENSIONS = benchmark_params[1]
+    if dims==None:
+        NUM_DIMENSIONS = benchmark_params[1]
+    else:
+        NUM_DIMENSIONS = dims
     EPS = benchmark_params[2]
     X_MIN = benchmark_params[3]
     X_MAX = benchmark_params[4]
@@ -320,8 +323,8 @@ def set_history_fitness_bounds(population):
 # End evolutionary functions
 #-------------------------------------------
 
-def main(num_trials, function_params):
-    initialize_function(function_params)
+def main(num_trials, function_params, dims = None):
+    initialize_function(function_params, dims)
     best = 1e10
     avg = 0.0
     std = 0.0
@@ -354,3 +357,5 @@ print "SPHERE"
 main(3, benchmarkFunctions.SPHERE())
 print "BRANIN"
 main(3, benchmarkFunctions.BRANIN())
+print "ALPINE"
+main(3, benchmarkFunctions.ALPINE())

@@ -316,7 +316,7 @@ def std_dev(list_items, mean_items):
     variance_list = map(lambda x : pow(x-mean_items, 2), list_items)
     return math.sqrt(sum(variance_list)/float(len(list_items)))
 
-def initialize_function(benchmark_params):
+def initialize_function(benchmark_params, dims):
 	global fitness
 	global X_MIN
 	global X_MAX
@@ -324,7 +324,10 @@ def initialize_function(benchmark_params):
 	global NUM_DIMENSIONS
 
 	fitness = benchmark_params[0]
-	NUM_DIMENSIONS = benchmark_params[1]
+	if dims==None:
+		NUM_DIMENSIONS = benchmark_params[1]
+	else:
+		NUM_DIMENSIONS = dims
 	CONVERGENCE_PRECISION = benchmark_params[2]
 	X_MIN = benchmark_params[3]
 	X_MAX = benchmark_params[4]
@@ -339,8 +342,8 @@ def initialize_function(benchmark_params):
 		generate_population = generate_population_branin
 		delta_t = delta_t_branin
 
-def main(num_of_trials, function_params):
-    initialize_function(function_params)
+def main(num_of_trials, function_params, dims=None):
+    initialize_function(function_params, dims)
 
     print CONVERGENCE_PRECISION
     print NUM_DIMENSIONS
@@ -375,13 +378,15 @@ def main(num_of_trials, function_params):
 #main(5, benchmarkFunctions.GRIEWANK())
 #print "RASTRIGIN"
 #main(5, benchmarkFunctions.RASTRIGIN())
-print "ROSENBROCK"
-main(5, benchmarkFunctions.ROSENBROCK())
-print "SCHEWEFEL 226"
-main(5, benchmarkFunctions.SCHWEFEL226())
-print "SCHEWEFEL 222"
-main(5, benchmarkFunctions.SCHWEFEL222())
-print "SPHERE"
-main(5, benchmarkFunctions.SPHERE())
-print "BRANIN"
-main(5, benchmarkFunctions.BRANIN())
+#print "ROSENBROCK"
+#main(5, benchmarkFunctions.ROSENBROCK())
+#print "SCHEWEFEL 226"
+#main(5, benchmarkFunctions.SCHWEFEL226())
+#print "SCHEWEFEL 222"
+#main(5, benchmarkFunctions.SCHWEFEL222())
+#print "SPHERE"
+#main(5, benchmarkFunctions.SPHERE())
+#print "BRANIN"
+#main(5, benchmarkFunctions.BRANIN())
+print "ALPINE"
+main(5, benchmarkFunctions.ALPINE())
