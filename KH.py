@@ -3,6 +3,8 @@ import math
 import benchmarkFunctions
 import copy
 
+#sem operadores geneticos
+
 NUM_DIMENSIONS = 20
 
 NUM_ITERATIONS = 1000
@@ -23,6 +25,8 @@ CONVERGENCE_PRECISION = 10**-3
 
 X_MAX = 32
 X_MIN = -32
+Y_MAX = 32
+Y_MIN = -32
 
 fitness = benchmarkFunctions.ackley
 kbest = 10**9
@@ -43,6 +47,16 @@ def generate_population():
 		for s in range(NUM_DIMENSIONS):
 			individual = random.uniform(X_MIN, X_MAX);
 			genome.append(individual)
+		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
+	return population
+
+def generate_population_branin():
+	population = list()
+	for i in range(POPULATION_SIZE):
+		genome = list()
+		individual1 = random.uniform(X_MIN, X_MAX);
+		individual2 = random.uniform(Y_MIN, Y_MAX);
+		genome.extend([individual1, individual2])
 		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
 	return population
 
@@ -67,14 +81,12 @@ def vector_constant_product(vector1, constant):
 	return [x_i * constant for x_i in vector1]
 
 def random_difusion(iteration):
-	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - 3*iteration/NUM_ITERATIONS))
+	return vector_constant_product(make_rand_vector(NUM_DIMENSIONS), DIFUSION_SPEED * (1 - iteration/float(NUM_ITERATIONS)))
 
 def distance(v1, v2):
 	return norm(vector_diff(v1,v2))
 
 def k_hat(ki, kj):
-	global kworst
-	global kbest
 	return (ki - kj) / (kworst - kbest)
 
 def x_hat(xi, xj):
@@ -129,7 +141,7 @@ def alfa(krill, krill_fit, best, population, population_fitness, iteration):
 	return vector_sum(local,target)
 
 def C_best(iteration):
-	return 2 * (random.uniform(0,1) + iteration/NUM_ITERATIONS)
+	return 2 * (random.uniform(0,1) + iteration/float(NUM_ITERATIONS))
 
 def food_position(population, population_fitness):
 	sum_denominator = 0
@@ -147,7 +159,7 @@ def beta_food(krill, krill_fit, food_pos, iteration):
 	return  vector_constant_product(k_x_hat_product(krill, food_pos, krill_fit, food_fit), C_food(iteration))
 
 def C_food(iteration):
-	return 2*(1 - iteration/NUM_ITERATIONS)
+	return 2*(1 - iteration/float(NUM_ITERATIONS))
 
 def neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration):
 	return vector_sum(vector_constant_product(alfa(krill, krill_fit, best, population, population_fitness, iteration), N_MAX), vector_constant_product(old_N, INERTIA_NEIGHBORS))
@@ -197,10 +209,18 @@ def delta_t(population):
 	meanU = list()
 
 	for x in range(NUM_DIMENSIONS):
-		meanU.append(X_MAX -X_MIN)
+		meanU.append(X_MAX-X_MIN)
 
 	# list.sort(meanU)
 	# print(meanU)
+	return CT *  sum(meanU)
+
+def delta_t_branin(population):
+	meanU = list()
+
+	meanU.append(X_MAX-X_MIN)
+	meanU.append(Y_MAX-Y_MIN)
+
 	return CT *  sum(meanU)
 
 def check_for_solution(population):
@@ -246,12 +266,12 @@ def evolve():
 	   	else:
 	   		best_change_iterations += 1
 
-		INERTIA_NEIGHBORS = 0.1 + 0.8 * (1 - i/NUM_ITERATIONS)
-		INERTIA_FOOD = 0.1 + 0.8 * (1 - i/NUM_ITERATIONS)
+		INERTIA_NEIGHBORS = 0.1 + 0.8 * (1 - i/float(NUM_ITERATIONS))
+		INERTIA_FOOD = 0.1 + 0.8 * (1 - i/float(NUM_ITERATIONS))
 
 	   	print "iteration "+ str(i)+ ": kworst = "+ str(kworst)+ " | kbest = "+ str(kbest)
 		dt = delta_t(population)
-		print dt
+		#print dt
 		# print population
 
 		for idx, krill in enumerate(population):
@@ -267,11 +287,9 @@ def evolve():
 		# if USE_RECOMBINATION:
 		#	 offspring = generate_offspring(population)
 
-		
 		population = new_population
 
 	solutions = check_for_solution(new_population)
-	solved = True
 	CONVERGENT_INDIVIDUALS.append(solutions)
 	SOLUTION_FOUND_ITERATIONS.append(i)
 	print SOLUTION_FOUND_ITERATIONS
@@ -280,12 +298,16 @@ def evolve():
 	KBEST_FITNESS.append(min(kbest_fit))
 
 	INDIVIDUALS_FITNESS.append(mean_pop_fitness)
-	CONVERGENT_EXECS+=1
 	print "best "+ str(population[kbest_fit.index(min(kbest_fit))][1])
-	print "Solution found after " + str(i) + " iterations"
 	print "Population fitness: " + str(mean_pop_fitness)
 	print "Convergent individuals: " + str(solutions)
-	
+
+	if solutions > 0:
+		solved = True
+		CONVERGENT_EXECS+=1
+		print "Solution found after " + str(i) + " iterations"
+	else:
+		print "No solution found!"
 
 def mean(list_items):
     return sum(list_items)/float(len(list_items))
@@ -294,9 +316,43 @@ def std_dev(list_items, mean_items):
     variance_list = map(lambda x : pow(x-mean_items, 2), list_items)
     return math.sqrt(sum(variance_list)/float(len(list_items)))
 
-def main():
-    for i in range(50):
-        print "Execution " + str(i)
+def initialize_function(benchmark_params):
+	global fitness
+	global X_MIN
+	global X_MAX
+	global CONVERGENCE_PRECISION
+	global NUM_DIMENSIONS
+
+	fitness = benchmark_params[0]
+	NUM_DIMENSIONS = benchmark_params[1]
+	CONVERGENCE_PRECISION = benchmark_params[2]
+	X_MIN = benchmark_params[3]
+	X_MAX = benchmark_params[4]
+
+	is_branin = fitness == benchmarkFunctions.branin
+	if is_branin:
+		global Y_MIN
+		global Y_MAX
+		global generate_population
+		global delta_t
+		Y_MIN = benchmark_params[5]
+		Y_MAX = benchmark_params[6]
+		generate_population = generate_population_branin
+		delta_t = delta_t_branin
+	return is_branin
+
+def main(num_of_trials, function_params):
+    is_branin = initialize_function(function_params)
+
+    print CONVERGENCE_PRECISION
+    print NUM_DIMENSIONS
+    print X_MAX
+    print X_MIN
+    print Y_MAX
+    print Y_MIN
+
+    for i in range(num_of_trials):
+        print "Execution " + str(i+1)
         evolve()
         print ""
 
@@ -315,8 +371,19 @@ def main():
     print "Mean solution found " + str(mean(KBEST_FITNESS))
     # print "Mean of total convergence iterations: " + str(mean_iter_total)
     
-
-
-main()
-
-
+#print "ACKLEY"
+#main(5, benchmarkFunctions.ACKLEY())
+#print "GRIEWANK"
+#main(5, benchmarkFunctions.GRIEWANK())
+#print "RASTRIGIN"
+#main(5, benchmarkFunctions.RASTRIGIN())
+print "ROSENBROCK"
+main(5, benchmarkFunctions.ROSENBROCK())
+print "SCHEWEFEL 226"
+main(5, benchmarkFunctions.SCHWEFEL226())
+print "SCHEWEFEL 222"
+main(5, benchmarkFunctions.SCHWEFEL222())
+print "SPHERE"
+main(5, benchmarkFunctions.SPHERE())
+print "BRANIN"
+main(5, benchmarkFunctions.BRANIN())
