@@ -106,14 +106,13 @@ branin_min_y = 0
 
 #minimum 5/4*pi
 def branin(genome):
-	a = 1
 	b = 1.25/(math.pi ** 2)
 	c = 5/math.pi
 	d = 6
 	g = 10
 	h = 0.125/math.pi
 
-	return a * ((genome[1] - b * (genome[0]**2) + c * genome[0] - d)**2) * g *(1 - h) * math.cos(genome[0]) + g
+	return ((genome[1] - b * (genome[0]**2) + c * genome[0] - d)**2) * g *(1 - h) * math.cos(genome[0]) + g
 
 def BRANIN():
 	return [branin, 2, 5/(4*math.pi), branin_min_x, branin_max_x, branin_min_y, branin_max_y]
