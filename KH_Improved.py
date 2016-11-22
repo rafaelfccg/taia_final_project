@@ -26,6 +26,9 @@ CONVERGENCE_PRECISION = 10**-3
 X_MAX = 32
 X_MIN = -32
 
+Y_MAX = 32
+Y_MIN = -32
+
 fitness = benchmarkFunctions.ackley
 kbest = 10**9
 kworst = 0
@@ -45,6 +48,16 @@ def generate_population():
 		for s in range(NUM_DIMENSIONS):
 			individual = random.uniform(X_MIN, X_MAX);
 			genome.append(individual)
+		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
+	return population
+
+def generate_population_branin():
+	population = list()
+	for i in range(POPULATION_SIZE):
+		genome = list()
+		individual1 = random.uniform(X_MIN, X_MAX)
+		individual2 = random.uniform(Y_MIN, Y_MAX)
+		genome.extend([individual1, individual2])
 		population.append((genome, genome, zero_vector(NUM_DIMENSIONS), zero_vector(NUM_DIMENSIONS)))
 	return population
 #####
@@ -230,10 +243,39 @@ def delta_t(population, explore):
 	# print(meanU)
 	return c_t *  sum(meanU)
 
+def delta_t_branin(population, explore):
+	sumi = 0 
+	lower_bound = copy.copy(population[0][0])
+	upper_bound = copy.copy(population[0][0])
+	c_t = CT
+	if not explore:
+		c_t /= 2
+		lower_bound = copy.copy(population[0][0])
+		upper_bound = copy.copy(population[0][0])
+
+		for x in population:
+			for xi in range(NUM_DIMENSIONS):
+				if lower_bound[xi] > x[0][xi]:
+					lower_bound[xi] = x[0][xi]
+
+				if upper_bound[xi] < x[0][xi]:
+					upper_bound[xi] = x[0][xi]
+	 
+	meanU = list()
+
+	if not explore:
+		meanU.append(2*(upper_bound[x] - lower_bound[x]))
+		meanU.append(2*(upper_bound[x] - lower_bound[x]))
+	else:
+		meanU.append(X_MAX - X_MIN)
+		meanU.append(Y_MAX - Y_MIN)
+
+	return c_t *  sum(meanU)
+
 def check_for_solution(population):
 	solutions = 0
 	for x in population:
-		if abs(fitness(x[1])) < CONVERGENCE_PRECISION :
+		if abs(fitness(x[1])) < CONVERGENCE_PRECISION:
 			solutions += 1
 
 	return solutions
@@ -308,13 +350,13 @@ def evolve():
 		
 		population = new_population
 		print "########################"
+		global DIFUSION_SPEED
 		if flag_test:
 			flag_test = False
 			DIFUSION_SPEED = 0.005
 			# print population
 
 	solutions = check_for_solution(new_population)
-	solved = True
 	CONVERGENT_INDIVIDUALS.append(solutions)
 	SOLUTION_FOUND_ITERATIONS.append(i)
 	print SOLUTION_FOUND_ITERATIONS
@@ -323,11 +365,15 @@ def evolve():
 	KBEST_FITNESS.append(min(kbest_fit))
 
 	INDIVIDUALS_FITNESS.append(mean_pop_fitness)
-	CONVERGENT_EXECS+=1
 	print "best "+ str(population[kbest_fit.index(min(kbest_fit))][1])
-	print "Solution found after " + str(i) + " iterations"
 	print "Population fitness: " + str(mean_pop_fitness)
 	print "Convergent individuals: " + str(solutions)
+	if solutions > 0:
+		solved = True
+		CONVERGENT_EXECS+=1
+		print "Solution found after " + str(i) + " iterations"
+	else:
+		print "Solution not found!"
 	
 
 def mean(list_items):
@@ -337,9 +383,41 @@ def std_dev(list_items, mean_items):
     variance_list = map(lambda x : pow(x-mean_items, 2), list_items)
     return math.sqrt(sum(variance_list)/float(len(list_items)))
 
-def main():
-    for i in range(5):
-        print "Execution " + str(i)
+def initialize_function(benchmark_params):
+	global fitness
+	global X_MIN
+	global X_MAX
+	global CONVERGENCE_PRECISION
+	global NUM_DIMENSIONS
+
+	fitness = benchmark_params[0]
+	NUM_DIMENSIONS = benchmark_params[1]
+	CONVERGENCE_PRECISION = benchmark_params[2]
+	X_MIN = benchmark_params[3]
+	X_MAX = benchmark_params[4]
+
+	if fitness == benchmarkFunctions.branin:
+		global Y_MIN
+		global Y_MAX
+		global generate_population
+		global delta_t
+		Y_MIN = benchmark_params[5]
+		Y_MAX = benchmark_params[6]
+		generate_population = generate_population_branin
+		delta_t = delta_t_branin
+
+def main(num_of_trials, function_params):
+    initialize_function(function_params)
+
+    print CONVERGENCE_PRECISION
+    print NUM_DIMENSIONS
+    print X_MAX
+    print X_MIN
+    print Y_MAX
+    print Y_MIN
+
+    for i in range(num_of_trials):
+        print "Execution " + str(i+1)
         evolve()
         print ""
 
@@ -358,4 +436,19 @@ def main():
     print "Mean solution found " + str(mean(KBEST_FITNESS))
     # print "Mean of total convergence iterations: " + str(mean_iter_total)
     
-main()
+#print "ACKLEY"
+#main(5, benchmarkFunctions.ACKLEY())
+#print "GRIEWANK"
+#main(5, benchmarkFunctions.GRIEWANK())
+#print "RASTRIGIN"
+#main(5, benchmarkFunctions.RASTRIGIN())
+#print "ROSENBROCK"
+#main(5, benchmarkFunctions.ROSENBROCK())
+#print "SCHEWEFEL 226"
+#main(5, benchmarkFunctions.SCHWEFEL226())
+#print "SCHEWEFEL 222"
+#main(5, benchmarkFunctions.SCHWEFEL222())
+#print "SPHERE"
+#main(5, benchmarkFunctions.SPHERE())
+print "BRANIN"
+main(5, benchmarkFunctions.BRANIN())
