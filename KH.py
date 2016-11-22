@@ -329,8 +329,7 @@ def initialize_function(benchmark_params):
 	X_MIN = benchmark_params[3]
 	X_MAX = benchmark_params[4]
 
-	is_branin = fitness == benchmarkFunctions.branin
-	if is_branin:
+	if fitness == benchmarkFunctions.branin:
 		global Y_MIN
 		global Y_MAX
 		global generate_population
@@ -339,10 +338,9 @@ def initialize_function(benchmark_params):
 		Y_MAX = benchmark_params[6]
 		generate_population = generate_population_branin
 		delta_t = delta_t_branin
-	return is_branin
 
 def main(num_of_trials, function_params):
-    is_branin = initialize_function(function_params)
+    initialize_function(function_params)
 
     print CONVERGENCE_PRECISION
     print NUM_DIMENSIONS
