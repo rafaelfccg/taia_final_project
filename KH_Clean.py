@@ -332,7 +332,6 @@ def main(num_trials, function_params, dims = None):
         print "Running trial #" + str(i+1)
         (p, b) = move()
         best = min(b[1], best)
-        print b[1]
         avg += numpy.mean([x[1] for x in p])
         std += numpy.std([x[1] for x in p])
     avg = avg / num_trials
@@ -341,21 +340,12 @@ def main(num_trials, function_params, dims = None):
     print "Average out of " + str(num_trials) + " runs: " + str(avg)
     print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
 
-#print "ACKLEY"
-#main(3, benchmarkFunctions.ACKLEY())
-#print "GRIEWANK"
-#main(3, benchmarkFunctions.GRIEWANK())
-#print "RASTRIGIN"
-#main(3, benchmarkFunctions.RASTRIGIN())
-#print "ROSENBROCK"
-#main(3, benchmarkFunctions.ROSENBROCK())
-#print "SCHEWEFEL 226"
-#main(3, benchmarkFunctions.SCHWEFEL226())
-#print "SCHEWEFEL 222"
-#main(3, benchmarkFunctions.SCHWEFEL222())
-print "SPHERE"
-main(3, benchmarkFunctions.SPHERE())
-print "BRANIN"
-main(3, benchmarkFunctions.BRANIN())
-print "ALPINE"
-main(3, benchmarkFunctions.ALPINE())
+def test_case_2(benchmark_params):
+    dimensions = [2,4,6,8]
+
+    for dim in dimensions:
+        print 'DIMENSIONS: ' + str(dim)
+        main(25, benchmark_params, dim)
+
+print "ACKLEY"
+test_case_2(benchmarkFunctions.ACKLEY())
