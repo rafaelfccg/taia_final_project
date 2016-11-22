@@ -91,7 +91,7 @@ def k_hat(ki, kj):
 def x_hat(xi, xj):
 	diff = vector_diff(xj,xi)
 	norm_diff = norm(diff)
-	return [x/(norm_diff + EPSILON) for x in diff]
+	return [float(x)/(norm_diff + EPSILON) for x in diff]
 
 def k_x_hat_product(krill_i,krill_j,fitness_i, fitness_j):
 	return vector_constant_product(x_hat(krill_i, krill_j), k_hat(fitness_i, fitness_j))
@@ -125,7 +125,7 @@ def sensing_distance(krill, population):
 	val1 = sum(map(lambda x : distance(x[0], krill), population))
 
 	# print val1
-	return val1/(POPULATION_SIZE*5)
+	return float(val1)/(POPULATION_SIZE*5)
 
 def alfa_target(krill, krill_fit, best, best_fit, iteration):
 	cbest = C_best(iteration)
@@ -140,7 +140,7 @@ def alfa(krill, krill_fit, best, population, population_fitness, iteration):
 	return vector_sum(local,target)
 
 def C_best(iteration):
-	return 2 * (random.uniform(0,1) + iteration/NUM_ITERATIONS)
+	return 2 * (random.uniform(0,1) + float(iteration)/NUM_ITERATIONS)
 
 def neighbors_induced_mov(krill, krill_fit, best, population, population_fitness, old_N, iteration):
 	return vector_sum(vector_constant_product(alfa(krill, krill_fit, best, population, population_fitness, iteration), N_MAX), vector_constant_product(old_N, INERTIA_NEIGHBORS))
@@ -153,7 +153,7 @@ def food_position(population, population_fitness):
 	sum_denominator = 0
 	sum_numerator = zero_vector(len(population[0][0]))
 	for idx, krill in enumerate(population):
-		fit_weight = 1/population_fitness[idx]
+		fit_weight = 1.0/population_fitness[idx]
 		sum_numerator = vector_sum(sum_numerator, vector_constant_product(krill[0],fit_weight))
 		sum_denominator += fit_weight
 
@@ -165,7 +165,7 @@ def beta_food(krill, krill_fit, food_pos, iteration):
 	return  vector_constant_product(k_x_hat_product(krill, food_pos, krill_fit, food_fit), C_food(iteration))
 
 def C_food(iteration):
-	return 2*(1 - iteration/NUM_ITERATIONS)
+	return 2*(1 - float(iteration)/NUM_ITERATIONS)
 
 def beta(krill, krill_fit, krill_best, x_food, population, population_fitness, iteration):
 	return vector_sum( beta_food(krill, krill_fit, x_food, iteration), k_x_hat_product(krill, krill_best, krill_fit, fitness(krill_best)))
