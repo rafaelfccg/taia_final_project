@@ -371,22 +371,13 @@ def main(num_of_trials, function_params, dims=None):
     print "Best solution found " + str(min(KBEST_FITNESS))
     print "Mean solution found " + str(mean(KBEST_FITNESS))
     # print "Mean of total convergence iterations: " + str(mean_iter_total)
-    
-#print "ACKLEY"
-#main(5, benchmarkFunctions.ACKLEY())
-#print "GRIEWANK"
-#main(5, benchmarkFunctions.GRIEWANK())
-#print "RASTRIGIN"
-#main(5, benchmarkFunctions.RASTRIGIN())
-#print "ROSENBROCK"
-#main(5, benchmarkFunctions.ROSENBROCK())
-#print "SCHEWEFEL 226"
-#main(5, benchmarkFunctions.SCHWEFEL226())
-#print "SCHEWEFEL 222"
-#main(5, benchmarkFunctions.SCHWEFEL222())
-#print "SPHERE"
-#main(5, benchmarkFunctions.SPHERE())
-#print "BRANIN"
-#main(5, benchmarkFunctions.BRANIN())
-print "ALPINE"
-main(5, benchmarkFunctions.ALPINE())
+
+def test_case_2(benchmark_params):
+    dimensions = [2,4,6,8]
+
+    for dim in dimensions:
+        print 'DIMENSIONS: ' + str(dim)
+        main(25, benchmark_params, dim)
+        print ""
+
+test_case_2(benchmarkFunctions.ACKLEY())
