@@ -12,6 +12,8 @@ X_MIN = -32.0
 
 USE_CROSS_OVER = True
 
+LINEAR_INERTIA_DECREASE = True
+
 FASE_DURANTION = 125
 NUMBER_OF_FASES = MAX_ITERATIONS/FASE_DURANTION
 
@@ -276,11 +278,6 @@ def move():
         # else:
         dt_ = dt(population)
 
-        print dt_
-        print Xbest[1]
-        print Xbest[0]
-        print population[0][0]
-
         for i in range(POPULATION_SIZE):
             step = [dt_ * x for x in dX_dt[i]]
             Xi_new = list(population[i])
@@ -293,8 +290,9 @@ def move():
 
         population = list(new_population)
         # Linearly decrease inertia
-        # OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
-        # OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+        if LINEAR_INERTIA_DECREASE:
+            OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+            OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
 
         # Go to next iteration
         curr_iteration += 1
@@ -405,10 +403,17 @@ def main(num_trials, function_params, dims = None):
     print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
 
 def test_case_2(benchmark_params):
-    dimensions = [20]
+    global LINEAR_INERTIA_DECREASE
+    dimensions = [2,4,6,8]
 
     for dim in dimensions:
-        print 'DIMENSIONS: ' + str(dim)
+        LINEAR_INERTIA_DECREASE = True
+        print 'DIMENSIONS: ' + str(dim) +' linear decrease TRUE'
+        main(NUM_TRIALS, benchmark_params, dim)
+
+    for dim in dimensions:
+        LINEAR_INERTIA_DECREASE = False
+        print 'DIMENSIONS: ' + str(dim) +' linear decrease FALSE'
         main(NUM_TRIALS, benchmark_params, dim)
 
 print "ACKLEY"
