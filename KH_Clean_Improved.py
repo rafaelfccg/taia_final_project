@@ -3,7 +3,7 @@ import numpy
 import random
 
 MAX_ITERATIONS = 1000
-NUM_DIMENSIONS = 4
+NUM_DIMENSIONS = 20
 POPULATION_SIZE = 50
 NUM_TRIALS = 5
 
@@ -39,6 +39,30 @@ best_change_iterations = 0
 # Implemented according to PEP 485
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+def initialize_function(benchmark_params, dims):
+    global fitness
+    global X_MIN
+    global X_MAX
+    global EPS
+    global NUM_DIMENSIONS
+
+    fitness = benchmark_params[0]
+    if dims==None:
+        NUM_DIMENSIONS = benchmark_params[1]
+    else:
+        NUM_DIMENSIONS = dims
+    EPS = benchmark_params[2]
+    X_MIN = benchmark_params[3]
+    X_MAX = benchmark_params[4]
+
+    if fitness == benchmarkFunctions.branin:
+        global Y_MIN
+        global Y_MAX
+        global generate_population
+        Y_MIN = benchmark_params[5]
+        Y_MAX = benchmark_params[6]
+        generate_population = generate_population_branin
 
 #-------------------------------------------
 # End helpers
@@ -252,13 +276,11 @@ def move():
         # else:
         dt_ = dt(population)
 
-        # if it%100 == 0:
-        #     print population[0]
-        #     print dX_dt[0]
-        #     print Xbest[0]    
-        
-        # print Xbest[1]
-        # print dt_
+        print dt_
+        print Xbest[1]
+        print Xbest[0]
+        print population[0][0]
+
         for i in range(POPULATION_SIZE):
             step = [dt_ * x for x in dX_dt[i]]
             Xi_new = list(population[i])
@@ -299,6 +321,18 @@ def generate_population():
         for s in range(NUM_DIMENSIONS):
             coord = random.uniform(X_MIN, X_MAX);
             genome.append(coord)
+        population.append((genome, fitness(genome), genome, fitness(genome)))
+    set_fitness_bounds(population)
+    set_history_fitness_bounds(population)
+    return population
+
+def generate_population_branin():
+    population = list()
+    for i in range(POPULATION_SIZE):
+        genome = list()
+        coord1 = random.uniform(X_MIN, X_MAX)
+        coord2 = random.uniform(Y_MIN, Y_MAX);
+        genome.extend([coord1,coord2])
         population.append((genome, fitness(genome), genome, fitness(genome)))
     set_fitness_bounds(population)
     set_history_fitness_bounds(population)
@@ -353,12 +387,13 @@ def cross_over_operador(population):
 # End evolutionary functions
 #-------------------------------------------
 
-def run_trials(num_trials):
+def main(num_trials, function_params, dims = None):
+    initialize_function(function_params, dims)
     best = 1e10
     avg = 0.0
     std = 0.0
     for i in range(num_trials):
-        print "Running trial #" + str(i)
+        print "Running trial #" + str(i+1)
         (p, b) = move()
         best = min(b[1], best)
         avg += numpy.mean([x[1] for x in p])
@@ -366,8 +401,15 @@ def run_trials(num_trials):
     avg = avg / num_trials
     std = std / num_trials
     print "Best out of " + str(num_trials) + " runs: " + str(best)
-    print "Average out of " + str(num_trials) + "runs: " + str(avg)
-    print "Std. dev out of " + str(num_trials) + "runs: " + str(std)
+    print "Average out of " + str(num_trials) + " runs: " + str(avg)
+    print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
 
+def test_case_2(benchmark_params):
+    dimensions = [20]
 
-run_trials(NUM_TRIALS)
+    for dim in dimensions:
+        print 'DIMENSIONS: ' + str(dim)
+        main(NUM_TRIALS, benchmark_params, dim)
+
+print "ACKLEY"
+test_case_2(benchmarkFunctions.ACKLEY())

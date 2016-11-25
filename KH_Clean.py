@@ -358,7 +358,7 @@ def main(num_trials, function_params, dims = None):
     print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
 
 def test_case_2(benchmark_params):
-    dimensions = [2]
+    dimensions = [2,4,6,8]
 
     for dim in dimensions:
         print 'DIMENSIONS: ' + str(dim)
