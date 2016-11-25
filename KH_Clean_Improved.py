@@ -7,12 +7,13 @@ NUM_DIMENSIONS = 4
 POPULATION_SIZE = 50
 NUM_TRIALS = 5
 
-USE_CROSS_OVER = True
-
 X_MAX = 32.0
 X_MIN = -32.0
-Y_MAX = 32.0
-Y_MIN = -32.0
+
+USE_CROSS_OVER = True
+
+FASE_DURANTION = 125
+NUMBER_OF_FASES = MAX_ITERATIONS/FASE_DURANTION
 
 EPS = 1e-5
 
@@ -23,13 +24,13 @@ OMEGA_F = 0.9
 V_f = 0.02
 C_t = 0.5
 
-
 # Global iteration value
 curr_iteration = 0
 
 # Global fitness values
 Xworst = (list(), 0.0, list(), 0.0)
 Xbest = (list(), 1e10, list(), 1e10)
+best_change_iterations = 0
 
 ############################################
 # Begin helpers
@@ -38,30 +39,6 @@ Xbest = (list(), 1e10, list(), 1e10)
 # Implemented according to PEP 485
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
-
-def initialize_function(benchmark_params, dims):
-    global fitness
-    global X_MIN
-    global X_MAX
-    global EPS
-    global NUM_DIMENSIONS
-
-    fitness = benchmark_params[0]
-    if dims==None:
-        NUM_DIMENSIONS = benchmark_params[1]
-    else:
-        NUM_DIMENSIONS = dims
-    EPS = benchmark_params[2]
-    X_MIN = benchmark_params[3]
-    X_MAX = benchmark_params[4]
-
-    if fitness == benchmarkFunctions.branin:
-        global Y_MIN
-        global Y_MAX
-        global generate_population
-        Y_MIN = benchmark_params[5]
-        Y_MAX = benchmark_params[6]
-        generate_population = generate_population_branin
 
 #-------------------------------------------
 # End helpers
@@ -208,12 +185,21 @@ def dt(population):
         lower = 1e10
         for Xi in population:
             if Xi[0][i] > upper:
-                upper = Xi[0][i]
+                upper = min (Xi[0][i],X_MAX)
             if Xi[0][i] < lower:
-                lower = Xi[0][i]
+                lower = max(Xi[0][i],X_MIN)
         upper_bounds.append(upper)
         lower_bounds.append(lower)
+    return C_t * min(sum(numpy.subtract(upper_bounds, lower_bounds)), NUM_DIMENSIONS * (X_MAX - X_MIN))
+
+def dt2(population):
+    upper_bounds = list()
+    lower_bounds = list()
+    for i in range(NUM_DIMENSIONS):
+        upper_bounds.append(X_MAX)
+        lower_bounds.append(X_MIN)
     return C_t * sum(numpy.subtract(upper_bounds, lower_bounds))
+
 
 def move():
     global curr_iteration
@@ -221,6 +207,8 @@ def move():
     global OMEGA_N
     global Xworst
     global Xbest
+    global best_change_iterations
+    global D_MAX
 
     Xworst = (list(), 0.0, list(), 0.0)
     Xbest = (list(), 1e10, list(), 1e10)
@@ -238,6 +226,12 @@ def move():
         # Fitness evaluation
         set_fitness_bounds(population)
         set_history_fitness_bounds(population)
+        flag = False
+
+        if  best_change_iterations > 50:
+            D_MAX *= 10 
+            flag = True
+            best_change_iterations = 0
 
         # Calculate motion
         Ni_curr = list(Ni(population, Ni_old))
@@ -247,9 +241,24 @@ def move():
         Ni_old = list(Ni_curr)
         Fi_old = list(Fi_curr)
 
+        if flag:
+            D_MAX = 0.005
+
         # Update positions
         new_population = list()
+        isExploration = int(it/FASE_DURANTION)%2 == 0
+        # if isExploration:
+        #     dt_ = dt2(population) * (1 - float(it/FASE_DURANTION)/NUMBER_OF_FASES)
+        # else:
         dt_ = dt(population)
+
+        # if it%100 == 0:
+        #     print population[0]
+        #     print dX_dt[0]
+        #     print Xbest[0]    
+        
+        # print Xbest[1]
+        # print dt_
         for i in range(POPULATION_SIZE):
             step = [dt_ * x for x in dX_dt[i]]
             Xi_new = list(population[i])
@@ -261,10 +270,9 @@ def move():
             cross_over_operador(new_population)
 
         population = list(new_population)
-
         # Linearly decrease inertia
-        OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
-        OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+        # OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
+        # OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
 
         # Go to next iteration
         curr_iteration += 1
@@ -279,7 +287,7 @@ def move():
 # Begin evolutionary functions
 ############################################
 
-# Change the benchmark function in the main() call in order to modify the fitness evaluation
+# Change the benchmark function here in order to modify the fitness evaluation
 fitness = benchmarkFunctions.ackley
 
 # Each genome follows this pattern:
@@ -296,26 +304,31 @@ def generate_population():
     set_history_fitness_bounds(population)
     return population
 
-def generate_population_branin():
-    population = list()
-    for i in range(POPULATION_SIZE):
-        genome = list()
-        coord1 = random.uniform(X_MIN, X_MAX)
-        coord2 = random.uniform(Y_MIN, Y_MAX);
-        genome.extend([coord1,coord2])
-        population.append((genome, fitness(genome), genome, fitness(genome)))
-    set_fitness_bounds(population)
-    set_history_fitness_bounds(population)
-    return population
-
 def set_fitness_bounds(population):
     global Xworst
     global Xbest
-    for Xi in population:
+    global best_change_iterations
+    iteration_worst = population[0]
+    index_iter_worst = 0
+    best_has_changed = False
+    for idx, Xi in enumerate(population):
         if Xi[1] < Xbest[1]:
             Xbest = Xi
+            best_has_changed = True
+            best_change_iterations = 0
+        else:
+            best_change_iterations += 1
+        
         if Xi[1] > Xworst[1]:
             Xworst = Xi
+
+        if Xi[1] > iteration_worst[1]:
+            iteration_worst = Xi
+            index_iter_worst = idx
+
+    if not best_has_changed:
+        population.pop(index_iter_worst)
+        population.append(Xbest)
 
 def set_history_fitness_bounds(population):
     for Xi in population:
@@ -340,13 +353,12 @@ def cross_over_operador(population):
 # End evolutionary functions
 #-------------------------------------------
 
-def main(num_trials, function_params, dims = None):
-    initialize_function(function_params, dims)
+def run_trials(num_trials):
     best = 1e10
     avg = 0.0
     std = 0.0
     for i in range(num_trials):
-        print "Running trial #" + str(i+1)
+        print "Running trial #" + str(i)
         (p, b) = move()
         best = min(b[1], best)
         avg += numpy.mean([x[1] for x in p])
@@ -354,15 +366,8 @@ def main(num_trials, function_params, dims = None):
     avg = avg / num_trials
     std = std / num_trials
     print "Best out of " + str(num_trials) + " runs: " + str(best)
-    print "Average out of " + str(num_trials) + " runs: " + str(avg)
-    print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
+    print "Average out of " + str(num_trials) + "runs: " + str(avg)
+    print "Std. dev out of " + str(num_trials) + "runs: " + str(std)
 
-def test_case_2(benchmark_params):
-    dimensions = [2]
 
-    for dim in dimensions:
-        print 'DIMENSIONS: ' + str(dim)
-        main(NUM_TRIALS, benchmark_params, dim)
-
-print "ACKLEY"
-test_case_2(benchmarkFunctions.ACKLEY())
+run_trials(NUM_TRIALS)
