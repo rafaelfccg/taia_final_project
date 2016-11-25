@@ -7,6 +7,8 @@ NUM_DIMENSIONS = 2
 POPULATION_SIZE = 50
 NUM_TRIALS = 50
 
+USE_CROSS_OVER = True
+
 X_MAX = 32.0
 X_MIN = -32.0
 Y_MAX = 32.0
@@ -20,6 +22,7 @@ OMEGA_N = 0.9
 OMEGA_F = 0.9
 V_f = 0.02
 C_t = 0.5
+
 
 # Global iteration value
 curr_iteration = 0
@@ -254,7 +257,11 @@ def move():
             Xi_new[1] = fitness(Xi_new[0])
             new_population.append(tuple(Xi_new))
 
+        if USE_CROSS_OVER:
+            cross_over_operador(new_population)
+
         population = list(new_population)
+
         # Linearly decrease inertia
         OMEGA_F = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
         OMEGA_N = 0.9 - ((curr_iteration * 0.8) / MAX_ITERATIONS)
@@ -318,6 +325,16 @@ def set_history_fitness_bounds(population):
             Xi_[3] = Xi[1]
             Xi_[2] = list(Xi[0])
         Xi = tuple(Xi_)
+
+def cross_over_operador(population):
+    pop_len = len(population)
+    for Xi in population:
+        Cr = 0.2 * kij_hat(Xi, Xbest)
+        for d in range(NUM_DIMENSIONS):
+            if random.uniform(0,1) < Cr:
+                j = random.randint(0,pop_len - 1)
+                Xj = population[j]
+                Xi[0][d] = Xj[0][d]
 
 #-------------------------------------------
 # End evolutionary functions
