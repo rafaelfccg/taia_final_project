@@ -3,8 +3,6 @@ import math
 import benchmarkFunctions
 import copy
 
-#sem operadores geneticos
-
 NUM_DIMENSIONS = 20
 
 NUM_ITERATIONS = 1000
