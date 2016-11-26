@@ -3,6 +3,7 @@ import sys
 import operator
 
 FUNCTION_EVALUATION = 0
+EPS = 1e-5
 
 def product(list):
 	p = 1
@@ -44,7 +45,7 @@ def ackley(genome):
 	return -20 * math.exp(a) - math.exp(b) + 20 + math.e
 
 def ACKLEY():
-	return [ackley, 20, 10**-3, ackley_min_x, ackley_max_x]
+	return [ackley, 20, EPS, ackley_min_x, ackley_max_x]
 
 # minimum 0
 def griewank (genome):
@@ -56,7 +57,7 @@ def griewank (genome):
 	return sumi - prod
 
 def GRIEWANK():
-	return [griewank, 20, 10**-3, griewank_min_x, griewank_max_x]
+	return [griewank, 20, EPS, griewank_min_x, griewank_max_x]
 
 # minimum 0
 def rastrigin (genome):
@@ -65,7 +66,7 @@ def rastrigin (genome):
 	return sumi
 
 def RASTRIGIN():
-	return [rastrigin, 20, 10**-3, rastrigin_min_x, rastrigin_max_x]
+	return [rastrigin, 20, EPS, rastrigin_min_x, rastrigin_max_x]
 
 # minimum 0
 def rosenbrock(genome):
@@ -74,27 +75,27 @@ def rosenbrock(genome):
 	return sumi
 
 def ROSENBROCK():
-	return [rosenbrock, 20, 10**-3, rosenbrock_min_x, rosenbrock_max_x]
+	return [rosenbrock, 20, EPS, rosenbrock_min_x, rosenbrock_max_x]
 
 # minimum 0
 def Schwefel226(genome):
 	return (sum(map(lambda x : -x * math.sin(math.sqrt(math.fabs(x))), genome)))
 
 def SCHWEFEL226():
-	return [Schwefel226, 20, 10**-3, schwefel226_min_x, schwefel226_max_x]
+	return [Schwefel226, 20, EPS, schwefel226_min_x, schwefel226_max_x]
 
 def Schwefel222(genome):
 	modified_genome = map(lambda x : math.fabs(x), genome)
 	return sum(modified_genome) + product(modified_genome)
 
 def SCHWEFEL222():
-	return [Schwefel222, 20, 10**-3, schwefel222_min_x, schwefel222_max_x]
+	return [Schwefel222, 20, EPS, schwefel222_min_x, schwefel222_max_x]
 
 def Sphere(genome):
 	return math.sqrt(sum(map(lambda x : x**2, genome)))
 
 def SPHERE():
-	return [Sphere, 20, 10**-3, sphere_min_x, sphere_max_x]
+	return [Sphere, 20, EPS, sphere_min_x, sphere_max_x]
 
 # 2 dimensions
 
@@ -125,7 +126,7 @@ def alpine(genome):
 	return sum(map(lambda xi: math.fabs(xi*math.sin(xi)+0.1*xi), genome))
 
 def ALPINE():
-	return [alpine, 4, 10**-3, alpine_min_x, alpine_max_x]
+	return [alpine, 4, EPS, alpine_min_x, alpine_max_x]
 
 # # dimensions 4
 # PS: Ta faltando valores na tabela de hartman1 que ele menciona no artigo
