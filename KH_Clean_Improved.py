@@ -5,7 +5,7 @@ import random
 MAX_ITERATIONS = 1000
 NUM_DIMENSIONS = 20
 POPULATION_SIZE = 50
-NUM_TRIALS = 5
+NUM_TRIALS = 25
 
 X_MAX = 32.0
 X_MIN = -32.0
@@ -385,22 +385,22 @@ def cross_over_operador(population):
 # End evolutionary functions
 #-------------------------------------------
 
-def main(num_trials, function_params, dims = None):
+def main(function_params, dims = None):
     initialize_function(function_params, dims)
     best = 1e10
     avg = 0.0
     std = 0.0
-    for i in range(num_trials):
+    for i in range(NUM_TRIALS):
         print "Running trial #" + str(i+1)
         (p, b) = move()
         best = min(b[1], best)
         avg += numpy.mean([x[1] for x in p])
         std += numpy.std([x[1] for x in p])
-    avg = avg / num_trials
-    std = std / num_trials
-    print "Best out of " + str(num_trials) + " runs: " + str(best)
-    print "Average out of " + str(num_trials) + " runs: " + str(avg)
-    print "Std. dev out of " + str(num_trials) + " runs: " + str(std)
+    avg = avg / NUM_TRIALS
+    std = std / NUM_TRIALS
+    print "Best out of " + str(NUM_TRIALS) + " runs: " + str(best)
+    print "Average out of " + str(NUM_TRIALS) + " runs: " + str(avg)
+    print "Std. dev out of " + str(NUM_TRIALS) + " runs: " + str(std)
 
 def test_case_2(benchmark_params):
     global LINEAR_INERTIA_DECREASE
@@ -409,12 +409,12 @@ def test_case_2(benchmark_params):
     for dim in dimensions:
         LINEAR_INERTIA_DECREASE = True
         print 'DIMENSIONS: ' + str(dim) +' linear decrease TRUE'
-        main(NUM_TRIALS, benchmark_params, dim)
+        main(benchmark_params, dim)
 
     for dim in dimensions:
         LINEAR_INERTIA_DECREASE = False
         print 'DIMENSIONS: ' + str(dim) +' linear decrease FALSE'
-        main(NUM_TRIALS, benchmark_params, dim)
+        main(benchmark_params, dim)
 
 print "ACKLEY"
 test_case_2(benchmarkFunctions.ACKLEY())
