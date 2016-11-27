@@ -138,8 +138,11 @@ def find_food(population):
     enum = [0.0 for i in range(NUM_DIMENSIONS)]
     denom = 0.0
     for Xi in population:
-        enum = numpy.add(enum, [(1.0 / Xi[1]) * x for x in Xi[0]])
-        denom += 1.0 / Xi[1]
+        cur_fitness = Xi[1]
+        if cur_fitness == 0:
+            cur_fitness = 1e-100
+        enum = numpy.add(enum, [(1.0 / cur_fitness) * x for x in Xi[0]])
+        denom += 1.0 / cur_fitness
     position = numpy.divide(enum, denom)
     return (position, fitness(position))
 
@@ -396,11 +399,12 @@ def main(function_params, dims = None):
         best = min(b[1], best)
         avg += numpy.mean([x[1] for x in p])
         std += numpy.std([x[1] for x in p])
+        print best
     avg = avg / NUM_TRIALS
     std = std / NUM_TRIALS
     print "Best out of " + str(NUM_TRIALS) + " runs: " + str(best)
-    print "Average out of " + str(NUM_TRIALS) + " runs: " + str(avg)
     print "Std. dev out of " + str(NUM_TRIALS) + " runs: " + str(std)
+    print "Average out of " + str(NUM_TRIALS) + " runs: " + str(avg)
 
 def test_case_2(benchmark_params):
     global LINEAR_INERTIA_DECREASE
@@ -411,10 +415,5 @@ def test_case_2(benchmark_params):
         print 'DIMENSIONS: ' + str(dim) +' linear decrease TRUE'
         main(benchmark_params, dim)
 
-    for dim in dimensions:
-        LINEAR_INERTIA_DECREASE = False
-        print 'DIMENSIONS: ' + str(dim) +' linear decrease FALSE'
-        main(benchmark_params, dim)
-
-print "ACKLEY"
-test_case_2(benchmarkFunctions.ACKLEY())
+print "RASTRIGIN"
+test_case_2(benchmarkFunctions.RASTRIGIN())
